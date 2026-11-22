@@ -8,10 +8,10 @@ import { storageFor } from "@/providers/storage";
 import { ActionForm } from "../../action-form";
 import { Button, Field, PageHeader, Panel, Pill } from "../../ui";
 import { removeMetaConnection, saveMetaConnection, testMeta } from "./actions";
+import { SyncPanel } from "./sync-panel";
 
 const PLANNED = [
-  { name: "Meta Lead Ads (formulários)", phase: "Fase 2", text: "Receber leads de formulários instantâneos por webhook, com permissão leads_retrieval." },
-  { name: "Site / Pixel / CAPI / GA4", phase: "Fase 3", text: "UTMs, formulário do site, eventos deduplicados e sessões agregadas." },
+    { name: "Site / Pixel / CAPI / GA4", phase: "Fase 3", text: "UTMs, formulário do site, eventos deduplicados e sessões agregadas." },
   { name: "WhatsApp Business Platform", phase: "Fase 3", text: "Somente API oficial em número elegível. Clique em botão de WhatsApp não é conversa confirmada." },
   { name: "Google Ads API", phase: "Fase 3", text: "Importar campanhas e métricas de Search. Acesso via projeto Google Cloud." },
   { name: "Marketplace", phase: "Manual", text: "Sem integração. Registro manual, respeitando as políticas atuais." },
@@ -127,6 +127,12 @@ export default async function IntegrationsPage() {
                 )}
               </div>
             )}
+            {test?.ok && test.account.currency !== brand.currency && (
+              <p className="mt-3 text-xs text-warn">
+                A conta de anúncios usa {test.account.currency} e a marca está em {brand.currency}. Os números da Meta ficam na moeda da conta.
+              </p>
+            )}
+            {conn && <SyncPanel brandId={brand.id} timeZone={brand.timezone} />}
           </div>
 
           <div className="flex flex-col gap-4">
@@ -164,7 +170,7 @@ export default async function IntegrationsPage() {
               </ul>
             </div>
             <p className="text-[11px] text-soft">
-              Por enquanto o app só confere a conexão, sem mudar nada na Meta. O próximo passo é puxar os números dos anúncios. Criar anúncios na Meta vem depois, sempre pausados e só com o seu OK.
+              O app só lê da Meta: campanhas, números por dia e leads dos formulários. Criar anúncios na Meta vem depois, sempre pausados e só com o seu OK.
             </p>
           </div>
         </div>

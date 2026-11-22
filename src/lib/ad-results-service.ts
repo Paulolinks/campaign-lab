@@ -35,7 +35,8 @@ export async function loadAdResults(brandId: string, opts: { adId?: string; now?
   const today = dayInZone(opts.now ?? new Date(), brand.timezone);
   const rules = parseRules(brand.decisionRules);
   const rows = await db().publishedAd.findMany({
-    where: { brandId, ...(opts.adId ? { id: opts.adId } : {}) },
+    // Ads read from Meta that are not linked to a variant stay out of Resultados (they live in the Gerenciador).
+    where: { brandId, ...(opts.adId ? { id: opts.adId } : { NOT: { variantId: null, lastSyncAt: { not: null } } }) },
     orderBy: { createdAt: "desc" },
     include: adInclude,
   });

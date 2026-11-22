@@ -36,20 +36,49 @@ export function graphVersion(): string {
   return v && /^v\d+\.\d+$/.test(v) ? v : "v23.0";
 }
 
-async function graphGet<T>(creds: MetaCredentials, path: string, fields?: string): Promise<T> {
-  const params = new URLSearchParams({ access_token: creds.token });
-  if (fields) params.set("fields", fields);
-  if (creds.appSecret) params.set("appsecret_proof", createHmac("sha256", creds.appSecret).update(creds.token).digest("hex"));
+/** A Meta Graph API error with its code, so callers can tell a rate limit from an expired token. */
+export class MetaApiError extends Error {
+  constructor(message: string, readonly code: number | null = null, readonly subcode: number | null = null) {
+    super(message);
+    this.name = "MetaApiError";
+  }
+}
+
+type GraphError = { error?: { message?: string; code?: number; error_subcode?: number } };
+
+async function graphFetch<T>(url: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${GRAPH}/${graphVersion()}/${path}?${params}`, { cache: "no-store", signal: AbortSignal.timeout(15_000) });
+    res = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(60_000) });
   } catch {
-    throw new Error("Sem resposta da Meta. Confira a internet do servidor e tente de novo.");
+    throw new MetaApiError("Sem resposta da Meta. Confira a internet do servidor e tente de novo.");
   }
-  const body = (await res.json().catch(() => ({}))) as T & { error?: { message?: string } };
-  // Graph error messages never include the token; we keep only the message.
-  if (!res.ok || body.error) throw new Error(body.error?.message ?? `Meta respondeu ${res.status}`);
+  const body = (await res.json().catch(() => ({}))) as T & GraphError;
+  // Graph error messages never include the token; we keep only the message and codes.
+  if (!res.ok || body.error) throw new MetaApiError(body.error?.message ?? `Meta respondeu ${res.status}`, body.error?.code ?? null, body.error?.error_subcode ?? null);
   return body;
+}
+
+function graphUrl(creds: MetaCredentials, path: string, params: Record<string, string> = {}): string {
+  const q = new URLSearchParams({ ...params, access_token: creds.token });
+  if (creds.appSecret) q.set("appsecret_proof", createHmac("sha256", creds.appSecret).update(creds.token).digest("hex"));
+  return `${GRAPH}/${graphVersion()}/${path}?${q}`;
+}
+
+export async function graphGet<T>(creds: MetaCredentials, path: string, fields?: string): Promise<T> {
+  return graphFetch<T>(graphUrl(creds, path, fields ? { fields } : {}));
+}
+
+/** Reads every page of a Graph API list (follows paging.next). Only GET: nothing is changed on Meta. */
+export async function graphList<T>(creds: MetaCredentials, path: string, params: Record<string, string>): Promise<T[]> {
+  const out: T[] = [];
+  let url: string | undefined = graphUrl(creds, path, { limit: "500", ...params });
+  for (let page = 0; url && page < 1000; page++) {
+    const body: { data?: T[]; paging?: { next?: string } } = await graphFetch(url);
+    out.push(...(body.data ?? []));
+    url = body.paging?.next;
+  }
+  return out;
 }
 
 export type MetaTestResult =

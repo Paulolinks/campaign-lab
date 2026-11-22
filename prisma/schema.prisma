@@ -158,6 +158,10 @@ model Brand {
   publishedAds             PublishedAd[]
   leads                    Lead[]
   adDecisions              AdDecision[]
+  metaCampaigns            MetaCampaign[]
+  metaAdSets               MetaAdSet[]
+  metaSyncRuns             MetaSyncRun[]
+  metaPeriodInsights       MetaPeriodInsight[]
 
   @@unique([workspaceId, slug])
   @@map("brand")
@@ -238,6 +242,110 @@ model MetaConnection {
   updatedAt          DateTime @updatedAt
 
   @@map("meta_connection")
+}
+
+/// Campaign as it exists on Meta (read-only copy, spec 04). Not the same as CampaignPlan (internal idea).
+model MetaCampaign {
+  id                String    @id @default(cuid())
+  brandId           String
+  brand             Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  externalId        String
+  name              String
+  objective         String?
+  status            String?
+  effectiveStatus   String?
+  /// Budgets in the ad account currency (Meta sends minor units; stored converted).
+  dailyBudget       Decimal?  @db.Decimal(12, 2)
+  lifetimeBudget    Decimal?  @db.Decimal(12, 2)
+  startTime         DateTime?
+  stopTime          DateTime?
+  externalCreatedAt DateTime?
+  lastSyncAt        DateTime  @default(now())
+
+  @@unique([brandId, externalId])
+  @@map("meta_campaign")
+}
+
+/// Ad set as it exists on Meta (read-only copy, spec 04).
+model MetaAdSet {
+  id                 String    @id @default(cuid())
+  brandId            String
+  brand              Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  externalId         String
+  campaignExternalId String
+  name               String
+  status             String?
+  effectiveStatus    String?
+  dailyBudget        Decimal?  @db.Decimal(12, 2)
+  lifetimeBudget     Decimal?  @db.Decimal(12, 2)
+  optimizationGoal   String?
+  targetingSummary   String?
+  startTime          DateTime?
+  endTime            DateTime?
+  externalCreatedAt  DateTime?
+  lastSyncAt         DateTime  @default(now())
+
+  @@unique([brandId, externalId])
+  @@index([brandId, campaignExternalId])
+  @@map("meta_ad_set")
+}
+
+/// Meta numbers for a fixed period (today, last 7 days...), exactly as Meta reports them for that period.
+/// Reach and frequency are not additive across days, so the Gerenciador reads these instead of summing daily rows.
+model MetaPeriodInsight {
+  id          String   @id @default(cuid())
+  brandId     String
+  brand       Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  /// campaign | adset | ad
+  level       String
+  externalId  String
+  /// today | yesterday | last_7d | last_30d | this_month | maximum
+  preset      String
+  spend       Decimal  @db.Decimal(12, 2)
+  impressions Int      @default(0)
+  reach       Int?
+  frequency   Float?
+  clicks      Int?
+  linkClicks  Int?
+  leads       Int?
+  syncedAt    DateTime @default(now())
+
+  @@unique([brandId, level, externalId, preset])
+  @@index([brandId, level, preset])
+  @@map("meta_period_insight")
+}
+
+enum MetaSyncKind {
+  FULL
+  INCREMENTAL
+  LEADS
+}
+
+enum MetaSyncStatus {
+  RUNNING
+  SUCCESS
+  ERROR
+}
+
+/// One run of the Meta read-only sync. A RUNNING row blocks another run of the same kind for the brand.
+model MetaSyncRun {
+  id         String         @id @default(cuid())
+  brandId    String
+  brand      Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  kind       MetaSyncKind
+  trigger    String
+  status     MetaSyncStatus @default(RUNNING)
+  startedAt  DateTime       @default(now())
+  finishedAt DateTime?
+  /// { campaigns, adSets, ads, days, leads }
+  counts     Json?
+  step       String?
+  error      String?
+  retryAfter DateTime?
+  userId     String?
+
+  @@index([brandId, kind, startedAt])
+  @@map("meta_sync_run")
 }
 
 // ---------- Planning: campaign plan → ad variant (internal ideas, not platform objects) ----------
@@ -445,6 +553,10 @@ model PublishedAd {
   utmUrl             String?
   publishedAt        DateTime?
   lastSyncAt         DateTime?
+  /// Meta effective_status (ACTIVE, PAUSED, CAMPAIGN_PAUSED, ARCHIVED, DELETED...). Filled by the sync.
+  effectiveStatus    String?
+  thumbnailUrl       String?
+  externalCreatedAt  DateTime?
   /// Internal life cycle (spec 02). Independent of the platform status.
   lifecycle          AdLifecycle      @default(TESTING)
   liveSince          DateTime?        @db.Date
@@ -568,12 +680,17 @@ model Lead {
   utmMedium        String?
   utmCampaign      String?
   utmContent       String?
+  /// Meta lead id (Lead Ads form). Unique per brand so a lead is never imported twice.
+  externalLeadId   String?
+  /// Raw form answers from Meta: [{ name, values }].
+  formAnswers      Json?
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   statusChanges    LeadStatusChange[]
   estimates        Estimate[]
   jobs             Job[]
 
+  @@unique([brandId, externalLeadId])
   @@index([brandId, createdAt])
   @@index([brandId, status])
   @@map("lead")

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dayInZone, daysBetween, pickOneRowPerDay, summarizeAd, type AdLeadRow, type DailyRow } from "./ad-results";
+import { addDays, dayInZone, daysBetween, oneRowPerAdDay, pickOneRowPerDay, summarizeAd, type AdLeadRow, type DailyRow } from "./ad-results";
 
 const dayRow = (day: string, spendCents: number, extra: Partial<DailyRow> = {}): DailyRow => ({
   day, spendCents, impressions: 1000, reach: null, linkClicks: 10, platformLeads: null, ...extra,
@@ -94,5 +94,18 @@ describe("pickOneRowPerDay", () => {
       { day: "2026-11-02", source: "META_API", v: 4 },
     ]);
     expect(rows.map((r) => r.v)).toEqual([2, 4]);
+  });
+});
+
+describe("oneRowPerAdDay", () => {
+  it("keeps the Meta row when Manual, CSV and Meta have the same ad and day, and keeps other ads apart", () => {
+    const d = new Date("2026-11-20T00:00:00Z");
+    const rows = oneRowPerAdDay([
+      { publishedAdId: "a", date: d, source: "MANUAL", spend: "10" },
+      { publishedAdId: "a", date: d, source: "CSV", spend: "11" },
+      { publishedAdId: "a", date: d, source: "META_API", spend: "12" },
+      { publishedAdId: "b", date: d, source: "MANUAL", spend: "5" },
+    ]);
+    expect(rows.map((r) => `${r.publishedAdId}:${r.source}`).sort()).toEqual(["a:META_API", "b:MANUAL"]);
   });
 });
