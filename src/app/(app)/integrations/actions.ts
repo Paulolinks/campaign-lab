@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { generateAgentKey, hashAgentKey } from "@/domain/agent-access";
 import { normalizeAdAccountId, normalizePageId } from "@/domain/meta-check";
 import type { ActionState } from "@/lib/action-state";
 import { audit } from "@/lib/audit";
@@ -109,4 +110,27 @@ export async function syncMetaNow(): Promise<ActionState> {
 /** "Recarregar todo o histórico": reads everything Meta keeps again (replaces, never adds twice). */
 export async function syncMetaFull(): Promise<ActionState> {
   return startSync("FULL");
+}
+
+export type AgentKeyState = { ok?: string; error?: string; key?: string } | null;
+
+/** "Acesso do Claude": creates a read-only key for the analyst. Shown once; only its hash is stored (spec 05). */
+export async function createAgentKey(_: AgentKeyState, data: FormData): Promise<AgentKeyState> {
+  const user = await requireEditor();
+  if (user.role !== "OWNER") return { error: "Só o dono pode criar essa chave." };
+  const name = String(data.get("name") ?? "").trim().slice(0, 60) || "Claude (analista)";
+  const key = generateAgentKey();
+  const row = await db().agentAccessKey.create({ data: { workspaceId: user.workspaceId, name, keyHash: hashAgentKey(key), last4: key.slice(-4), createdById: user.id } });
+  await audit({ workspaceId: user.workspaceId, userId: user.id, action: "agent_key.created", entity: "AgentAccessKey", entityId: row.id, data: { name } });
+  revalidatePath("/integrations");
+  return { ok: "Chave criada. Copie agora: ela não aparece de novo.", key };
+}
+
+export async function revokeAgentKey(id: string): Promise<ActionState> {
+  const user = await requireEditor();
+  if (user.role !== "OWNER") return { error: "Só o dono pode revogar essa chave." };
+  const res = await db().agentAccessKey.updateMany({ where: { id, workspaceId: user.workspaceId, revokedAt: null }, data: { revokedAt: new Date() } });
+  if (res.count) await audit({ workspaceId: user.workspaceId, userId: user.id, action: "agent_key.revoked", entity: "AgentAccessKey", entityId: id });
+  revalidatePath("/integrations");
+  return { ok: "Chave revogada." };
 }

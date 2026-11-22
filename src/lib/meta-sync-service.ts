@@ -1,6 +1,7 @@
 import "server-only";
 import type { MetaSyncKind, Prisma } from "@/generated/prisma/client";
 import { dayInZone } from "@/domain/ad-results";
+import { creativeText, type RawCreative } from "@/domain/agent-access";
 import { leadFieldsFromForm, unixSeconds, type FieldData } from "@/domain/meta-leads";
 import { normalizeAdAccountId } from "@/domain/meta-check";
 import {
@@ -155,6 +156,9 @@ async function syncMetrics(brandId: string, accountId: string, creds: MetaCreden
   }
   counts.ads = ads.length;
 
+  progress.step = "Textos dos anúncios";
+  await syncCreatives(creds, accountId, adIds);
+
   progress.step = "Números por dia";
   const today = dayInZone(now, account.timezone_name);
   const window = syncWindow(kind, today);
@@ -203,6 +207,27 @@ async function syncMetrics(brandId: string, accountId: string, creds: MetaCreden
         db().metaPeriodInsight.createMany({ data }),
       ]);
     }
+  }
+}
+
+const CREATIVE_FIELDS = "creative{title,body,call_to_action_type,image_url,video_id,thumbnail_url,object_story_spec,asset_feed_spec}";
+
+/**
+ * Ad text and media (spec 05), so the analyst can judge the message and not only the numbers.
+ * Optional: if Meta refuses these fields, the numbers are still synced.
+ */
+async function syncCreatives(creds: MetaCredentials, accountId: string, adIds: Map<string, string>) {
+  let rows: { id: string; creative?: RawCreative }[];
+  try {
+    rows = await graphList(creds, `${accountId}/ads`, { fields: `id,${CREATIVE_FIELDS}` });
+  } catch (err) {
+    console.warn(`[meta-sync] ad texts skipped: ${err instanceof Error ? err.message : String(err)}`);
+    return;
+  }
+  for (const r of rows) {
+    const id = adIds.get(r.id);
+    const creative = creativeText(r.creative);
+    if (id && creative) await db().publishedAd.update({ where: { id }, data: { creative } });
   }
 }
 

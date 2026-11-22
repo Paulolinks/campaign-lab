@@ -8,6 +8,7 @@ import { storageFor } from "@/providers/storage";
 import { ActionForm } from "../../action-form";
 import { Button, Field, PageHeader, Panel, Pill } from "../../ui";
 import { removeMetaConnection, saveMetaConnection, testMeta } from "./actions";
+import { AgentAccessPanel } from "./agent-access-panel";
 import { SyncPanel } from "./sync-panel";
 
 const PLANNED = [
@@ -42,7 +43,7 @@ const STEPS = [
 ];
 
 export default async function IntegrationsPage() {
-  const { brand } = await requireBrand();
+  const { brand, user } = await requireBrand();
   const [channels, driveReady, conn, lastTest] = await Promise.all([
     db().channelAccount.findMany({ where: { brandId: brand.id }, orderBy: { platform: "asc" } }),
     storageFor("GOOGLE_DRIVE").isConfigured(),
@@ -175,6 +176,8 @@ export default async function IntegrationsPage() {
           </div>
         </div>
       </section>
+
+      {user.role === "OWNER" && <AgentAccessPanel workspaceId={user.workspaceId} timeZone={brand.timezone} />}
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <Panel title="Armazenamento de mídia">
