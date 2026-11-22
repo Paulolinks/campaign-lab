@@ -1,0 +1,632 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Better Auth (same shape as the publisher app, for future single sign-on) ----------
+
+model User {
+  id            String            @id
+  name          String
+  email         String            @unique
+  emailVerified Boolean           @default(false)
+  image         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  memberships   WorkspaceMember[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------- Workspace ----------
+
+enum WorkspaceRole {
+  OWNER
+  EDITOR
+  SALES
+  VIEWER
+}
+
+model Workspace {
+  id        String            @id @default(cuid())
+  name      String
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  members   WorkspaceMember[]
+  brands    Brand[]
+  auditLogs AuditLog[]
+
+  @@map("workspace")
+}
+
+model WorkspaceMember {
+  id          String        @id @default(cuid())
+  workspaceId String
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role        WorkspaceRole @default(VIEWER)
+  createdAt   DateTime      @default(now())
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_member")
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  brandId     String?
+  userId      String?
+  action      String
+  entity      String
+  entityId    String?
+  data        Json?
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([entity, entityId])
+  @@map("audit_log")
+}
+
+// ---------- Brands (each brand's data is isolated by brandId) ----------
+
+model Brand {
+  id                       String           @id @default(cuid())
+  workspaceId              String
+  workspace                Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name                     String
+  slug                     String
+  industry                 String?
+  domain                   String?
+  timezone                 String           @default("America/New_York")
+  currency                 String           @default("USD")
+  serviceArea              String?
+  /// Words/claims this brand must not use in ads (e.g. "financing"). Import shows a warning when found.
+  forbiddenTerms           String[]         @default([])
+  /// Ad test cycle (spec 02): daily budget per ad, target cost per booked visit, brand daily cap.
+  adDailyBudget            Decimal?         @db.Decimal(12, 2)
+  targetCostPerAppointment Decimal?         @db.Decimal(12, 2)
+  maxDailySpend            Decimal?         @db.Decimal(12, 2)
+  /// Overrides of the decision rules (src/domain/ad-decision.ts); missing keys use the defaults.
+  decisionRules            Json?
+  notes                    String?
+  archivedAt               DateTime?
+  createdAt                DateTime         @default(now())
+  updatedAt                DateTime         @updatedAt
+  personas                 PersonaVersion[]
+  channels                 ChannelAccount[]
+  metaConnection           MetaConnection?
+  campaigns                CampaignPlan[]
+  variants                 AdVariant[]
+  assets                   MediaAsset[]
+  imports                  ImportBatch[]
+  publishedAds             PublishedAd[]
+  leads                    Lead[]
+  adDecisions              AdDecision[]
+
+  @@unique([workspaceId, slug])
+  @@map("brand")
+}
+
+/// Versioned persona / brand kit text. A new edit creates a new version; old ones are kept.
+model PersonaVersion {
+  id        String         @id @default(cuid())
+  brandId   String
+  brand     Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  name      String
+  version   Int
+  content   String
+  source    String?
+  approved  Boolean        @default(false)
+  createdBy String?
+  createdAt DateTime       @default(now())
+  campaigns CampaignPlan[]
+
+  @@unique([brandId, name, version])
+  @@map("persona_version")
+}
+
+enum Platform {
+  META
+  FACEBOOK_ORGANIC
+  INSTAGRAM_ORGANIC
+  GOOGLE_ADS
+  GOOGLE_BUSINESS_PROFILE
+  TIKTOK
+  YOUTUBE
+  NEXTDOOR
+  MARKETPLACE
+  WEBSITE
+  OTHER
+}
+
+enum ConnectionStatus {
+  DISCONNECTED
+  CONFIGURING
+  CONNECTED
+  ERROR
+}
+
+/// An ad account / page / profile of a brand on a platform. Tokens are never stored here.
+model ChannelAccount {
+  id                String           @id @default(cuid())
+  brandId           String
+  brand             Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  platform          Platform
+  name              String
+  externalAccountId String?
+  connectionStatus  ConnectionStatus @default(DISCONNECTED)
+  lastSyncAt        DateTime?
+  lastError         String?
+  notes             String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  publishedAds      PublishedAd[]
+
+  @@unique([brandId, platform, externalAccountId])
+  @@map("channel_account")
+}
+
+/// Meta (Facebook/Instagram) credentials of a brand, pasted in the app. Secrets are encrypted
+/// (AES-256-GCM, key from META_ENCRYPTION_KEY or BETTER_AUTH_SECRET) and never sent back to the browser.
+model MetaConnection {
+  id                 String   @id @default(cuid())
+  brandId            String   @unique
+  brand              Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  tokenEncrypted     String
+  tokenLast4         String
+  appSecretEncrypted String?
+  adAccountId        String
+  pageId             String
+  savedById          String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("meta_connection")
+}
+
+// ---------- Planning: campaign plan → ad variant (internal ideas, not platform objects) ----------
+
+enum PlanStatus {
+  DRAFT
+  READY
+  TESTING
+  PAUSED
+  ARCHIVED
+}
+
+model CampaignPlan {
+  id               String          @id @default(cuid())
+  brandId          String
+  brand            Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  campaignKey      String
+  name             String
+  persona          String
+  personaVersionId String?
+  personaVersion   PersonaVersion? @relation(fields: [personaVersionId], references: [id], onDelete: SetNull)
+  service          String
+  objective        String
+  hypothesis       String
+  channels         String[]
+  landingUrl       String
+  market           String?
+  testVariable     String?
+  ctaDestination   String?
+  budgetPerDay     Decimal?        @db.Decimal(12, 2)
+  budgetNote       String?
+  notes            String?
+  /// Fields from the import file that have no dedicated column.
+  extra            Json?
+  status           PlanStatus      @default(DRAFT)
+  startDate        DateTime?
+  endDate          DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  variants         AdVariant[]
+  leads            Lead[]
+
+  @@unique([brandId, campaignKey])
+  @@index([brandId, status])
+  @@map("campaign_plan")
+}
+
+enum TestLabel {
+  TESTING
+  INSUFFICIENT_DATA
+  BEST_QUALITY_PROVISIONAL
+  PAUSED
+  ARCHIVED
+}
+
+/// Owner approval of an ad before it goes to a platform. Independent of the internal status.
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model AdVariant {
+  id              String             @id @default(cuid())
+  brandId         String
+  brand           Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  campaignId      String
+  campaign        CampaignPlan       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  adKey           String
+  name            String?
+  angle           String
+  format          String
+  funnelStage     String
+  hook            String
+  primaryText     String
+  headline        String
+  description     String?
+  cta             String
+  visualDirection String
+  imagePrompt     String?
+  videoScript     String?
+  notes           String?
+  creativeStatus  String?
+  extra           Json?
+  status          PlanStatus         @default(DRAFT)
+  testLabel       TestLabel?
+  approvalStatus  ApprovalStatus     @default(PENDING)
+  approvalNote    String?
+  approvalAt      DateTime?
+  version         Int                @default(1)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  versions        AdVariantVersion[]
+  assets          MediaAsset[]
+  publishedAds    PublishedAd[]
+  leads           Lead[]
+
+  @@unique([brandId, adKey])
+  @@index([campaignId])
+  @@index([brandId, approvalStatus])
+  @@map("ad_variant")
+}
+
+/// Immutable snapshot of a variant each time its content changes (import or edit).
+model AdVariantVersion {
+  id            String       @id @default(cuid())
+  variantId     String
+  variant       AdVariant    @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  version       Int
+  snapshot      Json
+  importBatchId String?
+  importBatch   ImportBatch? @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  createdBy     String?
+  createdAt     DateTime     @default(now())
+
+  @@unique([variantId, version])
+  @@map("ad_variant_version")
+}
+
+enum ImportStatus {
+  COMMITTED
+  FAILED
+}
+
+model ImportBatch {
+  id        String             @id @default(cuid())
+  brandId   String
+  brand     Brand              @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  fileName  String
+  sha256    String
+  status    ImportStatus
+  summary   Json
+  createdBy String?
+  createdAt DateTime           @default(now())
+  versions  AdVariantVersion[]
+
+  @@index([brandId, createdAt])
+  @@map("import_batch")
+}
+
+// ---------- Media (storage provider is swappable: LOCAL now, GOOGLE_DRIVE later) ----------
+
+enum AssetKind {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+enum StorageProvider {
+  LOCAL
+  GOOGLE_DRIVE
+}
+
+enum UploadStatus {
+  STORED
+  UPLOAD_PENDING
+  SYNCED
+  FAILED
+}
+
+model MediaAsset {
+  id              String          @id @default(cuid())
+  brandId         String
+  brand           Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  variantId       String?
+  variant         AdVariant?      @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  kind            AssetKind
+  fileName        String
+  mimeType        String
+  bytes           BigInt
+  sha256          String
+  storageProvider StorageProvider @default(LOCAL)
+  storageKey      String
+  driveFileId     String?
+  uploadStatus    UploadStatus    @default(STORED)
+  width           Int?
+  height          Int?
+  durationSec     Float?
+  createdBy       String?
+  createdAt       DateTime        @default(now())
+
+  @@index([brandId, createdAt])
+  @@index([variantId])
+  @@map("media_asset")
+}
+
+// ---------- Distribution: real ads on platforms, linked to internal variants by external ID ----------
+
+model PublishedAd {
+  id                 String           @id @default(cuid())
+  brandId            String
+  brand              Brand            @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  variantId          String?
+  variant            AdVariant?       @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  channelAccountId   String?
+  channelAccount     ChannelAccount?  @relation(fields: [channelAccountId], references: [id], onDelete: SetNull)
+  platform           Platform
+  externalAdId       String
+  externalCampaignId String?
+  externalAdSetId    String?
+  name               String?
+  placement          String?
+  externalStatus     String?
+  url                String?
+  utmUrl             String?
+  publishedAt        DateTime?
+  lastSyncAt         DateTime?
+  /// Internal life cycle (spec 02). Independent of the platform status.
+  lifecycle          AdLifecycle      @default(TESTING)
+  liveSince          DateTime?        @db.Date
+  endedAt            DateTime?        @db.Date
+  notes              String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  insights           DailyAdInsight[]
+  leads              Lead[]
+  decisions          AdDecision[]
+
+  @@unique([brandId, platform, externalAdId])
+  @@index([variantId])
+  @@map("published_ad")
+}
+
+enum AdLifecycle {
+  TESTING
+  LIVE
+  ENDED
+}
+
+enum DecisionAction {
+  KEEP_LIVE
+  CANCEL
+  STOP
+}
+
+/// Owner decision on a published ad, with the numbers known at that moment (never recalculated).
+model AdDecision {
+  id            String         @id @default(cuid())
+  brandId       String
+  brand         Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  publishedAdId String
+  publishedAd   PublishedAd    @relation(fields: [publishedAdId], references: [id], onDelete: Cascade)
+  action        DecisionAction
+  /// Verdict suggested by the app at decision time.
+  suggested     String
+  reasons       String[]
+  /// Metrics + diagnosis at decision time (cents, counts).
+  snapshot      Json
+  /// Owner learning: what worked / what did not.
+  note          String?
+  decidedById   String
+  decidedAt     DateTime       @default(now())
+
+  @@index([publishedAdId, decidedAt])
+  @@index([brandId, decidedAt])
+  @@map("ad_decision")
+}
+
+enum MetricSource {
+  MANUAL
+  CSV
+  META_API
+  GOOGLE_ADS_API
+}
+
+model DailyAdInsight {
+  id            String       @id @default(cuid())
+  publishedAdId String
+  publishedAd   PublishedAd  @relation(fields: [publishedAdId], references: [id], onDelete: Cascade)
+  date          DateTime     @db.Date
+  source        MetricSource
+  spend         Decimal      @db.Decimal(12, 2)
+  impressions   Int          @default(0)
+  reach         Int?
+  linkClicks    Int?
+  clicks        Int?
+  platformLeads Int?
+  actions       Json?
+  ingestedAt    DateTime     @default(now())
+
+  @@unique([publishedAdId, date, source])
+  @@map("daily_ad_insight")
+}
+
+// ---------- Mini CRM ----------
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  DISQUALIFIED
+  APPOINTMENT_SCHEDULED
+  APPOINTMENT_COMPLETED
+  ESTIMATE_SENT
+  WON
+  LOST
+}
+
+enum AttributionConfidence {
+  CONFIRMED
+  PROBABLE
+  UNKNOWN
+}
+
+model Lead {
+  id               String                @id @default(cuid())
+  brandId          String
+  brand            Brand                 @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  name             String
+  phone            String?
+  email            String?
+  status           LeadStatus            @default(NEW)
+  requestedService String?
+  zip              String?
+  urgency          String?
+  primaryPriority  String?
+  reasonLost       String?
+  notes            String?
+  sourcePlatform   Platform?
+  sourceConfidence AttributionConfidence @default(UNKNOWN)
+  campaignId       String?
+  campaign         CampaignPlan?         @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  variantId        String?
+  variant          AdVariant?            @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  publishedAdId    String?
+  publishedAd      PublishedAd?          @relation(fields: [publishedAdId], references: [id], onDelete: SetNull)
+  utmSource        String?
+  utmMedium        String?
+  utmCampaign      String?
+  utmContent       String?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  statusChanges    LeadStatusChange[]
+  estimates        Estimate[]
+  jobs             Job[]
+
+  @@index([brandId, createdAt])
+  @@index([brandId, status])
+  @@map("lead")
+}
+
+model LeadStatusChange {
+  id        String      @id @default(cuid())
+  leadId    String
+  lead      Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  from      LeadStatus?
+  to        LeadStatus
+  userId    String?
+  createdAt DateTime    @default(now())
+
+  @@index([leadId])
+  @@map("lead_status_change")
+}
+
+enum EstimateStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
+model Estimate {
+  id        String         @id @default(cuid())
+  leadId    String
+  lead      Lead           @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  amount    Decimal        @db.Decimal(12, 2)
+  status    EstimateStatus @default(SENT)
+  sentAt    DateTime?
+  notes     String?
+  createdAt DateTime       @default(now())
+  jobs      Job[]
+
+  @@index([leadId])
+  @@map("estimate")
+}
+
+/// A won contract. directCosts = equipment, materials, labor, subcontractors, commissions.
+model Job {
+  id             String    @id @default(cuid())
+  leadId         String
+  lead           Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  estimateId     String?
+  estimate       Estimate? @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+  contractAmount Decimal   @db.Decimal(12, 2)
+  directCosts    Decimal   @default(0) @db.Decimal(12, 2)
+  closeDate      DateTime  @default(now())
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  @@index([leadId])
+  @@map("job")
+}

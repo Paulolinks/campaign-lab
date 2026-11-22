@@ -1,0 +1,26 @@
+# --- AI Project Starter ---
+# Instruções pessoais do Claude Code que não vão para o repositório
+CLAUDE.local.md
+.claude/settings.local.json
+
+# Resultado local do verify (scripts/verify.mjs)
+.kit/
+
+# Segredos (nunca commitar)
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+# Mantenha um .env.example COMMITADO, com nomes das variáveis e valores falsos.
+node_modules/
+.next/
+coverage/
+uploads/
+*.zip
+.data/
+src/generated/
+test-results/
+playwright-report/
+*.tsbuildinfo

@@ -1,0 +1,12 @@
+node_modules
+.next
+.data
+.kit
+.git
+test-results
+playwright-report
+tests
+context
+starter-guide
+*.zip
+*.log

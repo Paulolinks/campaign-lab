@@ -1,0 +1,76 @@
+# Production on the VPS, behind the Traefik that already runs there (same pattern as the publisher app).
+# Own database and volumes: never shares data with the other apps.
+#
+#   docker compose -f compose.traefik.yaml -p campaign-lab up -d --build
+#
+# Variables in the server's env file (created by scripts/vps-setup-env.sh):
+# APP_HOST, POSTGRES_PASSWORD, BETTER_AUTH_SECRET, BETTER_AUTH_URL, TRAEFIK_NETWORK, TRAEFIK_CERTRESOLVER, MAX_UPLOAD_MB.
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: campaignlab
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      POSTGRES_DB: campaignlab
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campaignlab"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    image: campaign-lab:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://campaignlab:${POSTGRES_PASSWORD}@postgres:5432/campaignlab
+      MEDIA_DIR: /data/media
+    volumes:
+      - media:/data/media
+    command: sh -c "npx prisma migrate deploy && npm run start"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal, traefik]
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${TRAEFIK_NETWORK:?defina TRAEFIK_NETWORK}
+      traefik.http.services.campaign-lab.loadbalancer.server.port: "3000"
+      traefik.http.routers.campaign-lab.rule: Host(`${APP_HOST:?defina APP_HOST}`)
+      traefik.http.routers.campaign-lab.entrypoints: websecure
+      traefik.http.routers.campaign-lab.tls: "true"
+      traefik.http.routers.campaign-lab.tls.certresolver: ${TRAEFIK_CERTRESOLVER:?defina TRAEFIK_CERTRESOLVER}
+
+  # Daily compressed dump of the database, kept for 14 days in /opt/campaign-lab/backups.
+  backup:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint: >
+      sh -c 'while true; do
+        f=/backups/campaignlab-$$(date +%Y%m%d-%H%M).sql.gz;
+        pg_dump -h postgres -U campaignlab campaignlab | gzip > "$$f.tmp" && mv "$$f.tmp" "$$f" && echo "backup ok $$f";
+        find /backups -name "campaignlab-*.sql.gz" -mtime +14 -delete;
+        sleep 86400;
+      done'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [internal]
+
+volumes:
+  pgdata:
+  media:
+
+networks:
+  internal:
+  traefik:
+    name: ${TRAEFIK_NETWORK}
+    external: true

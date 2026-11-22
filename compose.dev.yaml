@@ -1,0 +1,16 @@
+# Só o Postgres, para desenvolver com `npm run dev`. Porta 5434 para não conflitar com outros apps.
+name: campaign-lab-dev
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: campaignlab
+      POSTGRES_PASSWORD: campaignlab
+      POSTGRES_DB: campaignlab
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+
+volumes:
+  pgdata-dev:

@@ -1,0 +1,116 @@
+CSCAMP/1
+# Rascunho gerado em 2026-11-22. NADA foi publicado na Meta.
+# Importar no app: Importar -> colar ou subir este arquivo -> Pre-visualizar -> Importar como rascunho.
+CAMPAIGN
+CAMPAIGN_KEY: CS-INV-HEAT-2026-11
+CAMPAIGN_NAME: CS_Inverno-Aquecimento_2026-11-22
+BRAND: Cool Season
+PERSONA: The Careful Homeowner
+SERVICE: HEATING_REPLACEMENT_AND_MINI_SPLIT
+OBJECTIVE: QUALIFIED_LEADS
+TEST_HYPOTHESIS: In winter, homeowners with a heating problem they already feel (a quote in hand, a freezing room, or no heat tonight) book more visits than generic awareness ads. We test which of three angles gets the lowest cost per booked visit.
+CHANNELS: META_PAID
+LANDING_URL: {{BRAND_ESTIMATE_URL}}
+MARKET: Marietta and greater Atlanta, GA - within verified service area (ZIP list pending)
+TEST_VARIABLE: MESSAGE_ANGLE
+CTA_DESTINATION: META_INSTANT_FORM
+BUDGET_USD_PER_DAY: 40
+NOTES: <<<
+Estrutura na Meta: 1 campanha (Leads), 3 conjuntos (um por anuncio, US$ 20/dia cada, orcamento no conjunto), 1 anuncio por conjunto.
+Ligar so 2 conjuntos ao mesmo tempo (teto US$ 40/dia). Sugestao: C01 (SWAT, video pronto) + A01. B01 entra quando um dos dois for encerrado.
+Regra do app: teste ate o dia 3. Passa com 1 visita marcada ou 2 leads. Meta: US$ 120 por visita marcada.
+Sem preco, sem financiamento, sem promessa de economia, sem "24 horas", sem falar mal de concorrente. Sem neve nas imagens.
+>>>
+AD
+AD_KEY: CS-INV-HEAT-2026-11-A01
+ADSET_NAME: CS_SegundaOpiniao_2026-11-22_A01
+ADSET_BUDGET_USD_PER_DAY: 20
+ADSET_LOCATION: Marietta, GA + 25 mi (confirmar CEPs atendidos)
+ADSET_AGE: 30-65+
+ADSET_PLACEMENTS: Advantage+ (Feed do Facebook e do Instagram, Stories, Reels)
+ADSET_OPTIMIZATION: Leads · Formulário instantâneo
+FORM_QUESTIONS: Já recebeu orçamento de troca? · O sistema está funcionando? · Quando pretende resolver? · CEP · Nome, telefone, melhor horário
+AD_NAME: A01 - Two quotes, two different jobs (central)
+ANGLE: ESTIMATE_TRANSPARENCY
+FORMAT: VIDEO_9_16
+FUNNEL_STAGE: CONSIDERATION
+HOOK: Got two quotes to replace your heating system, and the prices are thousands apart?
+PRIMARY_TEXT: <<<
+Got a quote to replace your heat pump or furnace? Before you spend thousands, make sure you're comparing the same job. Equipment, ductwork, electrical work and warranty terms can vary from one estimate to another. Cool Season puts every item in writing, so you can compare apples to apples and decide with confidence. Already have a quote? Let us take a second look before you decide. Serving Marietta and the greater Atlanta area.
+>>>
+HEADLINE: Two Quotes. Two Different Jobs?
+DESCRIPTION: Get a second opinion, in writing.
+CTA: GET_QUOTE
+VISUAL_DIRECTION: Kitchen table on a gray winter morning with two generic estimates (no readable numbers), homeowner in a sweater, frosty window. Real Cool Season proposal shot for scene 4. Real logo in the editor. No snow.
+IMAGE_PROMPT: Overhead shot of a kitchen table on a gray winter morning with two generic HVAC estimate sheets side by side, blank checkbox fields, no readable numbers, homeowner's hands in a cozy sweater holding a pen between them, steaming coffee mug, vertical 9:16.
+VIDEO_SCRIPT: <<<
+SCENE 01 | HOOK: "Got two quotes to replace your heating system, and the prices are thousands apart?"
+SCENE 02 | CONTEXT: "That doesn't always mean one company is overcharging."
+SCENE 03 | EDUCATION: "It can mean they're not quoting the same work. Equipment, ductwork, electrical, warranty, cleanup."
+SCENE 04 | PROOF (REAL FOOTAGE): "At Cool Season, we put every item in writing, so you can compare apples to apples."
+SCENE 05 | CTA: "Already have a quote? Let us take a second look before you decide."
+>>>
+NOTES: Conjunto "CS_SegundaOpiniao_2026-11-22_A01". Base: D1 + OpenArt A1 (versao inverno). Formulario: ja tem orcamento? sistema funcionando? quando pretende resolver? CEP, nome, telefone, melhor horario.
+END_AD
+AD
+AD_KEY: CS-INV-HEAT-2026-11-B01
+ADSET_NAME: CS_QuartoGelado_2026-11-22_B01
+ADSET_BUDGET_USD_PER_DAY: 20
+ADSET_LOCATION: Marietta, GA + 25 mi (confirmar CEPs atendidos)
+ADSET_AGE: 30-65+
+ADSET_PLACEMENTS: Advantage+ (Feed do Facebook e do Instagram, Stories, Reels)
+ADSET_OPTIMIZATION: Leads · Formulário instantâneo
+FORM_QUESTIONS: Qual cômodo? · É o dono da casa? · Quando pretende resolver? · CEP · Nome, telefone
+AD_NAME: B01 - The room that's always freezing (mini split)
+ANGLE: PROBLEM_ROOM_COMFORT
+FORMAT: VIDEO_9_16
+FUNNEL_STAGE: CONSIDERATION
+HOOK: Is there one room in your house that's always freezing?
+PRIMARY_TEXT: <<<
+Is there one room in your house that's always freezing? The bedroom over the garage, the bonus room, the back office? Space heaters and extra blankets help a little, but they don't fix it. A ductless mini split heats that room on its own, without touching the rest of the house, and the same unit cools it next summer. We look at the room, the walls, the electrical and where every line goes before we recommend anything. Got a room like that? Send us a photo and let's talk.
+>>>
+HEADLINE: One Room. Finally Warm.
+DESCRIPTION: Heat and cool one room, no ductwork.
+CTA: GET_QUOTE
+VISUAL_DIRECTION: Bedroom over the garage with cold blue winter light, space heater and extension cord, then the same room warm with a realistic wall-mounted mini split. Real Cool Season mini split install (indoor + outdoor) for scene 4. No snow, no AI technician faces.
+IMAGE_PROMPT: Cozy bedroom with a clean wall-mounted ductless mini split indoor unit above the window, realistic size and mounting height, neat finish, no visible pipes, no logo, warm comfortable light, frosty window, vertical 9:16.
+VIDEO_SCRIPT: <<<
+SCENE 01 | HOOK: "Is there one room in your house that's always freezing?"
+SCENE 02 | PROBLEM: "Space heaters and extra blankets help a little. But they don't fix it."
+SCENE 03 | SOLUTION: "A ductless mini split heats and cools that room on its own, without touching the rest of the house."
+SCENE 04 | PROOF (REAL FOOTAGE): "We look at the room, the walls, the electrical, and where every line goes. Then we recommend."
+SCENE 05 | CTA: "Got a room like that? Send us a photo and let's talk."
+>>>
+NOTES: Conjunto "CS_QuartoGelado_2026-11-22_B01". Base: OpenArt A4. Formulario: qual comodo? (quarto/bonus room/garagem/sunroom/outro), dono da casa? (sim/nao), quando pretende resolver?, CEP, nome, telefone.
+END_AD
+AD
+AD_KEY: CS-INV-HEAT-2026-11-C01
+ADSET_NAME: CS_SWAT_2026-11-22_C01
+ADSET_BUDGET_USD_PER_DAY: 20
+ADSET_LOCATION: Marietta, GA + 25 mi (confirmar CEPs atendidos)
+ADSET_AGE: 30-65+
+ADSET_PLACEMENTS: Advantage+ (Feed do Facebook e do Instagram, Stories, Reels)
+ADSET_OPTIMIZATION: Leads · Formulário instantâneo
+FORM_QUESTIONS: O aquecimento está funcionando? (sim / mais ou menos / parado) · CEP · Nome, telefone
+AD_NAME: C01 - SWAT do ar (resposta rapida, humor)
+ANGLE: FAST_RESPONSE_HUMOR
+FORMAT: VIDEO_9_16
+FUNNEL_STAGE: AWARENESS
+HOOK: Heat went out? Call Cool Season...
+PRIMARY_TEXT: <<<
+Okay, we're not THAT fast. But when your heat goes out on a cold Georgia night, you won't be left waiting to hear back. Call or message Cool Season and a real person gets back to you fast, explains what's going on, and gives you clear options in writing. No guessing, no runaround. Heat acting up? Tap below and tell us what's happening.
+>>>
+HEADLINE: Heat Out? We Answer Fast.
+DESCRIPTION: Clear options, in writing.
+CTA: CONTACT_US
+VISUAL_DIRECTION: The SWAT video the owner already made (van flying over Atlanta, team arrives before the call ends). Add the honest end card: "We're not THAT fast... but we answer fast." Real logo in the editor.
+VIDEO_SCRIPT: <<<
+SCENE 01 | HOOK: Family is cold, calls Cool Season.
+SCENE 02 | GAG: The van takes off, SWAT style, over Atlanta.
+SCENE 03 | GAG: The team knocks on the door before the call ends.
+SCENE 04 | HONEST END CARD: "We're not THAT fast... but we answer fast."
+SCENE 05 | CTA: "Heat acting up? Tap below."
+>>>
+NOTES: Conjunto "CS_SWAT_2026-11-22_C01". Video ja pronto (feito pelo dono em 2026-11-17). Confirmar antes de publicar: quem responde o lead quando o Paulo esta numa visita, e em quanto tempo de verdade. Nao usar "same day" nem "24/7".
+END_AD
+END_CAMPAIGN

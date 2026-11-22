@@ -1,0 +1,10 @@
+{
+  "verify": [
+    { "name": "unit-tests", "run": "node scripts/run-unit-tests.mjs" },
+    { "name": "typecheck", "run": "npx tsc --noEmit" },
+    { "name": "lint", "run": "npx eslint" }
+  ],
+  "onEdit": [],
+  "protectedPaths": ["prisma/migrations/**", "context/reference/**"],
+  "contextLineBudget": 400
+}

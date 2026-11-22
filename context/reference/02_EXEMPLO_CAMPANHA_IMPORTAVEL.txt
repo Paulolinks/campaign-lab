@@ -1,0 +1,87 @@
+CSCAMP/1
+CAMPAIGN
+CAMPAIGN_KEY: CS-MS-QUALITY-2026-11
+CAMPAIGN_NAME: Mini Split - Quality vs Clarity vs Support
+BRAND: Cool Season
+PERSONA: The Careful Homeowner
+SERVICE: MINI_SPLIT_SINGLE_ZONE
+OBJECTIVE: QUALIFIED_LEADS
+TEST_HYPOTHESIS: Homeowners who value clarity and reliable installation may generate more profitable appointments than price-first traffic.
+CHANNELS: META_PAID, FACEBOOK_ORGANIC
+LANDING_URL: {{BRAND_ESTIMATE_URL}}
+MARKET: Greater Atlanta, GA - within verified service area
+TEST_VARIABLE: MESSAGE_ANGLE
+CTA_DESTINATION: WEBSITE_ESTIMATE_FORM
+BUDGET_USD_PER_DAY: TBD
+NOTES: <<<
+Material hipotético para validação. Três vídeos com duração e produção semelhantes; variar principalmente o ângulo da mensagem, não o produto.
+Não prometer financiamento, preço fechado, certificações, depoimentos ou garantias não verificadas.
+>>>
+AD
+AD_KEY: CS-MS-QUALITY-2026-11-A01
+AD_NAME: A01 - Done Right - Quality
+ANGLE: INSTALLATION_QUALITY
+FORMAT: VIDEO_9_16
+FUNNEL_STAGE: CONSIDERATION
+HOOK: A mini split is only as good as the installation behind it.
+PRIMARY_TEXT: <<<
+Thinking about installing a mini split in your home? Choosing the right equipment matters, but so does the installation. Ask about system sizing, the work included, and what happens after the job is done. At Cool Season, we can discuss your space and prepare an estimate based on your installation needs. Request an estimate to get started.
+>>>
+HEADLINE: Make Your Mini Split Installation Count
+DESCRIPTION: Understand the scope before choosing.
+CTA: REQUEST_ESTIMATE
+VISUAL_DIRECTION: Realistic residential mini split, clean indoor installation and close-up of actual work; genuine Cool Season footage when available.
+IMAGE_PROMPT: Photorealistic suburban Atlanta home interior, professional mini split installed level on a white wall, believable electrical and refrigerant routing, no logos, no fake review badges, vertical 9:16.
+VIDEO_SCRIPT: <<<
+SCENE 01 | HOOK: "A mini split is only as good as its installation."
+SCENE 02 | PROBLEM: "A quote may not explain every installation detail clearly."
+SCENE 03 | VALUE: "Ask about sizing, materials, drainage, and what the estimate includes."
+SCENE 04 | CTA: "Talk to Cool Season about your space and request an estimate."
+>>>
+NOTES: Customer-facing copy in US English. Verify technical details and visuals before publication.
+END_AD
+AD
+AD_KEY: CS-MS-QUALITY-2026-11-B01
+AD_NAME: B01 - Know What Is Included
+ANGLE: ESTIMATE_TRANSPARENCY
+FORMAT: VIDEO_9_16
+FUNNEL_STAGE: CONSIDERATION
+HOOK: Two mini split quotes can include very different work.
+PRIMARY_TEXT: <<<
+Comparing mini split estimates? Look beyond the final number. Ask what is included for equipment, installation materials, electrical preparation, drainage, and warranty coverage. A clear scope makes it easier to compare options fairly. Cool Season can help you understand the installation requirements for your space. Request an estimate.
+>>>
+HEADLINE: Compare the Work, Not Just Price
+DESCRIPTION: Ask the right questions before hiring.
+CTA: REQUEST_ESTIMATE
+VISUAL_DIRECTION: Two blank estimate sheets and close-ups of real installation elements; do not fabricate competitors' proposals.
+IMAGE_PROMPT: Photorealistic homeowner at kitchen table comparing two generic unbranded HVAC installation estimates, professional home setting, no fake prices or logos, vertical 9:16.
+VIDEO_SCRIPT: <<<
+SCENE 01 | HOOK: "Two mini split quotes can mean two very different jobs."
+SCENE 02 | CONTEXT: "One price alone won't tell you what's included."
+SCENE 03 | EDUCATION: "Ask about sizing, line sets, drainage, electrical work, and warranty terms."
+SCENE 04 | CTA: "Request a clear installation estimate from Cool Season."
+>>>
+END_AD
+AD
+AD_KEY: CS-MS-QUALITY-2026-11-C01
+AD_NAME: C01 - Comfort Beyond Installation
+ANGLE: RELIABILITY_SUPPORT
+FORMAT: VIDEO_9_16
+FUNNEL_STAGE: CONSIDERATION
+HOOK: Your comfort should not become a headache after installation.
+PRIMARY_TEXT: <<<
+Your mini split is a long-term comfort decision. Before hiring, ask how your installer evaluates your space, explains the installation, and documents what is covered if a problem comes up. At Cool Season, our goal is to help homeowners make an informed decision about their HVAC installation. Reach out to discuss your project and request an estimate.
+>>>
+HEADLINE: Choose Confidence for Your Comfort
+DESCRIPTION: Understand your installation before you commit.
+CTA: REQUEST_ESTIMATE
+VISUAL_DIRECTION: Homeowner consulting technician; show real, authorized staff and actual project footage where possible.
+IMAGE_PROMPT: Photorealistic professional HVAC installer calmly explaining a ductless mini split in a comfortable ordinary suburban living room, homeowner attentive, natural light, no fabricated awards, vertical 9:16.
+VIDEO_SCRIPT: <<<
+SCENE 01 | HOOK: "A new mini split should mean comfort, not new worries."
+SCENE 02 | PROBLEM: "Before you choose a contractor, ask what happens after the installation."
+SCENE 03 | EDUCATION: "Understand the scope, written coverage, and how you can get help."
+SCENE 04 | CTA: "Request a project estimate with Cool Season."
+>>>
+END_AD
+END_CAMPAIGN

@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* Tokens from context/reference/05_PROTOTIPO_VISUAL.html */
+:root {
+  --bg: #0b111d;
+  --sidebar: #0d1624;
+  --surface: #111c2c;
+  --surface2: #152235;
+  --ink: #eff5ff;
+  --soft: #93a9c5;
+  --border: #28374a;
+  --accent: #5bd7ba;
+  --accent-ink: #092c28;
+  --blue: #8bbaff;
+  --warn: #f5bd73;
+  --danger: #f87171;
+  --success: #72debe;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface2);
+  --color-ink: var(--ink);
+  --color-soft: var(--soft);
+  --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-blue: var(--blue);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.48 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+input,
+select,
+textarea {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px 11px;
+  color: var(--ink);
+  width: 100%;
+}
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+input[type="file"] {
+  padding: 6px;
+}
+input[type="checkbox"] {
+  width: auto;
+}
