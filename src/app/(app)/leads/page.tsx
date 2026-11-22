@@ -5,31 +5,67 @@ import { requireBrand } from "@/lib/session";
 import { ActionForm } from "../../action-form";
 import { Button, Empty, Field, PageHeader, Panel, Pill, Select, Table, TextArea } from "../../ui";
 import { createLead } from "./actions";
+import { Pipeline } from "./pipeline";
 
-export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+const PIPELINE_ORDER = ["NEW", "CONTACTED", "QUALIFIED", "APPOINTMENT_SCHEDULED", "APPOINTMENT_COMPLETED", "ESTIMATE_SENT", "WON", "LOST", "DISQUALIFIED"];
+
+export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ status?: string; view?: string }> }) {
   const { brand } = await requireBrand();
-  const { status } = await searchParams;
+  const { status, view: rawView } = await searchParams;
+  const view = rawView === "list" || status ? "list" : "pipeline";
   const filter = status && status in LEAD_STATUS ? (status as keyof typeof LEAD_STATUS) : undefined;
   const [leads, counts, campaigns, variants, published] = await Promise.all([
     db().lead.findMany({
       where: { brandId: brand.id, ...(filter ? { status: filter as never } : {}) },
       orderBy: { createdAt: "desc" },
-      take: 200,
-      include: { campaign: { select: { name: true } }, variant: { select: { adKey: true } }, jobs: true },
+      take: view === "pipeline" ? 500 : 200,
+      include: { campaign: { select: { name: true } }, variant: { select: { adKey: true } }, publishedAd: { select: { name: true } }, jobs: true },
     }),
     db().lead.groupBy({ by: ["status"], where: { brandId: brand.id }, _count: true }),
     db().campaignPlan.findMany({ where: { brandId: brand.id }, select: { id: true, name: true }, orderBy: { createdAt: "desc" } }),
     db().adVariant.findMany({ where: { brandId: brand.id }, select: { id: true, adKey: true }, orderBy: { adKey: "asc" } }),
-    db().publishedAd.findMany({ where: { brandId: brand.id }, select: { id: true, externalAdId: true, platform: true } }),
+    db().publishedAd.findMany({ where: { brandId: brand.id }, select: { id: true, externalAdId: true, platform: true, name: true }, orderBy: { createdAt: "desc" }, take: 300 }),
   ]);
+  const now = new Date().getTime();
   const countOf = (s: string) => counts.find((c) => c.status === s)?._count ?? 0;
 
   return (
     <>
       <PageHeader eyebrow={brand.name} title="Leads e vendas" subtitle="Contatos reais, do primeiro contato ao contrato. Mudar a etapa não cria lead novo." />
 
+      <div className="mb-4 inline-flex rounded-xl border border-line bg-surface p-1">
+        <Link href="/leads" className={`rounded-lg px-4 py-2 text-sm font-semibold ${view === "pipeline" ? "bg-accent text-accent-ink" : "text-soft hover:text-white"}`}>
+          Pipeline
+        </Link>
+        <Link href="/leads?view=list" className={`rounded-lg px-4 py-2 text-sm font-semibold ${view === "list" ? "bg-accent text-accent-ink" : "text-soft hover:text-white"}`}>
+          Lista
+        </Link>
+      </div>
+
+      {view === "pipeline" ? (
+        leads.length === 0 ? (
+          <Panel>
+            <Empty>Nenhum lead ainda. Cadastre abaixo ou conecte a Meta em Integrações para os leads dos formulários chegarem sozinhos.</Empty>
+          </Panel>
+        ) : (
+          <Pipeline
+            now={now}
+            stages={PIPELINE_ORDER.map((k) => ({ key: k, label: LEAD_STATUS[k].label }))}
+            leads={leads.map((l) => ({
+              id: l.id,
+              name: l.name,
+              phone: l.phone,
+              status: l.status,
+              createdAt: l.createdAt.toISOString(),
+              source: l.publishedAd?.name ?? l.variant?.adKey ?? (l.sourcePlatform ? PLATFORM[l.sourcePlatform] : null),
+              isNew: l.status === "NEW",
+            }))}
+          />
+        )
+      ) : (
+      <>
       <div className="mb-4 flex flex-wrap gap-2">
-        <Link href="/leads" className={`rounded-full border px-3 py-1 text-xs ${!filter ? "border-accent text-accent" : "border-line text-soft"}`}>
+        <Link href="/leads?view=list" className={`rounded-full border px-3 py-1 text-xs ${!filter ? "border-accent text-accent" : "border-line text-soft"}`}>
           Todos ({counts.reduce((s, c) => s + c._count, 0)})
         </Link>
         {Object.entries(LEAD_STATUS).map(([k, v]) => (
@@ -70,6 +106,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
           </Table>
         )}
       </Panel>
+      </>
+      )}
 
       <Panel title="Novo lead" className="mt-4">
         <ActionForm action={createLead}>
@@ -85,7 +123,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
             <Select label="Certeza da origem" name="sourceConfidence" defaultValue="UNKNOWN" options={options(CONFIDENCE)} />
             <Select label="Campanha" name="campaignId" options={[{ value: "", label: "—" }, ...campaigns.map((c) => ({ value: c.id, label: c.name }))]} />
             <Select label="Anúncio interno" name="variantId" options={[{ value: "", label: "—" }, ...variants.map((v) => ({ value: v.id, label: v.adKey }))]} />
-            <Select label="Anúncio publicado" name="publishedAdId" options={[{ value: "", label: "—" }, ...published.map((p) => ({ value: p.id, label: `${PLATFORM[p.platform]} ${p.externalAdId}` }))]} />
+            <Select label="Anúncio publicado" name="publishedAdId" options={[{ value: "", label: "—" }, ...published.map((p) => ({ value: p.id, label: p.name ? `${p.name} (${p.externalAdId})` : `${PLATFORM[p.platform]} ${p.externalAdId}` }))]} />
           </div>
           <details>
             <summary className="cursor-pointer text-sm text-soft">UTMs (se vieram do formulário do site)</summary>

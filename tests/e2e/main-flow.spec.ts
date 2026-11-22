@@ -139,7 +139,7 @@ test("upload a video to an ad, watch it, and it stays private", async ({ page, b
   await page.goto("/campaigns");
   await page.getByRole("link", { name: "Mini Split - Quality vs Clarity vs Support" }).click();
   await page.getByRole("link", { name: /CS-MS-QUALITY-2026-11-A01/ }).click();
-  await expect(page.getByText("A mini split is only as good as the installation behind it.")).toBeVisible();
+  await expect(page.getByText("A mini split is only as good as the installation behind it.").first()).toBeVisible();
   await expect(page.getByText("INSTALLATION QUALITY")).toBeVisible();
 
   await page.getByLabel("Arquivos de mídia").setInputFiles(VIDEO);
@@ -311,4 +311,89 @@ test("results: set brand targets, see the day-3 verdict with the strategy, cance
   await page.goto("/results");
   await expect(page.getByRole("heading", { name: "Encerrados (1)" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Placar por ângulo" })).toBeVisible();
+});
+
+// ---------- Spec 04: data read from Meta (inserted directly, as the sync would write it; no call to Meta in tests) ----------
+import pg from "pg";
+
+const E2E_DB = "postgresql://campaignlab:campaignlab@127.0.0.1:5434/campaignlab_e2e";
+
+async function sql(text: string, values: unknown[] = []) {
+  const client = new pg.Client({ connectionString: E2E_DB });
+  await client.connect();
+  try {
+    return (await client.query(text, values)).rows;
+  } finally {
+    await client.end();
+  }
+}
+
+test("gerenciador shows what runs on Meta with Meta's numbers and suggests the variant link", async ({ page }) => {
+  await login(page);
+  const [brand] = await sql(`SELECT id FROM brand WHERE name = 'Cool Season'`);
+  const [owner] = await sql(`SELECT id FROM "user" LIMIT 1`);
+  await sql(
+    `INSERT INTO meta_connection (id, "brandId", "tokenEncrypted", "tokenLast4", "adAccountId", "pageId", "savedById", "updatedAt")
+     VALUES ('mc1', $1, 'x', 'abcd', 'act_1234567890', '1234567890', $2, now())`,
+    [brand.id, owner.id],
+  );
+  await sql(`INSERT INTO meta_campaign (id, "brandId", "externalId", name, objective, "effectiveStatus", "dailyBudget") VALUES ('c1', $1, '111', 'Winter Heating Leads', 'OUTCOME_LEADS', 'ACTIVE', 40)`, [brand.id]);
+  await sql(`INSERT INTO meta_ad_set (id, "brandId", "externalId", "campaignExternalId", name, "effectiveStatus", "targetingSummary") VALUES ('s1', $1, '222', '111', 'Marietta 35mi', 'ACTIVE', 'Marietta (+35 mi) · 30–65')`, [brand.id]);
+  await sql(
+    `INSERT INTO published_ad (id, "brandId", platform, "externalAdId", "externalCampaignId", "externalAdSetId", name, "effectiveStatus", "lastSyncAt", "updatedAt")
+     VALUES ('pa-meta-1', $1, 'META', '333', '111', '222', 'A01 - Two HVAC Quotes', 'ACTIVE', now(), now())`,
+    [brand.id],
+  );
+  for (const [level, id] of [["campaign", "111"], ["adset", "222"], ["ad", "333"]]) {
+    await sql(
+      `INSERT INTO meta_period_insight (id, "brandId", level, "externalId", preset, spend, impressions, reach, frequency, clicks, "linkClicks", leads)
+       VALUES ($1, $2, $3, $4, 'last_7d', 80, 4000, 2500, 1.6, 90, 40, 8)`,
+      [`pi-${level}`, brand.id, level, id],
+    );
+  }
+  await sql(`INSERT INTO meta_sync_run (id, "brandId", kind, trigger, status, "finishedAt") VALUES ('run1', $1, 'FULL', 'MANUAL', 'SUCCESS', now())`, [brand.id]);
+
+  await page.goto("/manager");
+  await expect(page.getByRole("link", { name: "Na Meta" })).toBeVisible();
+  const row = page.getByRole("row", { name: /Winter Heating Leads/ });
+  await expect(row).toContainText("8 leads");
+  await expect(row).toContainText("$10.00"); // cost per result: $80 / 8
+  await expect(row).toContainText("$80.00");
+  await expect(row).toContainText("2.500"); // reach
+  await expect(row).toContainText("1.60"); // frequency
+  await expect(row).toContainText("$2.00"); // CPC: $80 / 40 link clicks
+
+  await page.getByRole("link", { name: "Winter Heating Leads" }).click();
+  await expect(page.getByText("Marietta (+35 mi) · 30–65")).toBeVisible();
+  await page.getByRole("link", { name: "Marietta 35mi" }).click();
+  await page.getByRole("button", { name: "Ligar a CS-MS-QUALITY-2026-11-A01?" }).click();
+  await page.reload();
+  await expect(page.getByRole("row", { name: /A01 - Two HVAC Quotes/ }).getByRole("link", { name: "CS-MS-QUALITY-2026-11-A01" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Planejado no app" }).click();
+  await expect(page.getByRole("link", { name: "+ Importar campanha" })).toBeVisible();
+});
+
+test("leads pipeline: a Meta form lead shows its answers and moves between stages", async ({ page }) => {
+  await login(page);
+  const [brand] = await sql(`SELECT id FROM brand WHERE name = 'Cool Season'`);
+  await sql(
+    `INSERT INTO lead (id, "brandId", name, phone, status, "sourcePlatform", "sourceConfidence", "publishedAdId", "externalLeadId", "formAnswers", "updatedAt")
+     VALUES ('lead-meta-1', $1, 'Mary Form', '+14045550123', 'NEW', 'META', 'CONFIRMED', 'pa-meta-1', 'L1', $2, now())`,
+    [brand.id, JSON.stringify([{ name: "what_service_do_you_need?", values: ["Heat pump"] }])],
+  );
+  await page.goto("/leads");
+  const newColumn = page.getByRole("region", { name: "Novo" });
+  await expect(newColumn.getByRole("link", { name: "Mary Form" })).toBeVisible();
+  await expect(newColumn.getByText("A01 - Two HVAC Quotes")).toBeVisible();
+
+  await page.getByLabel("Etapa de Mary Form").selectOption("CONTACTED");
+  await expect(page.getByRole("region", { name: "Contatado" }).getByRole("link", { name: "Mary Form" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Contatado" }).getByRole("link", { name: "Mary Form" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Mary Form" }).click();
+  await expect(page.getByText("What service do you need:")).toBeVisible();
+  await expect(page.getByText("Heat pump")).toBeVisible();
+  await expect(page.getByText("Contatado").first()).toBeVisible();
 });

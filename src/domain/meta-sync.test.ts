@@ -99,6 +99,12 @@ describe("suggestVariant", () => {
   it("does not match a code inside a longer code", () => expect(suggestVariant("Teste A010", variants)?.id).toBe("v3"));
   it("does not guess when two codes appear", () => expect(suggestVariant("A01 vs B01", variants)).toBeNull());
   it("returns null without a code", () => expect(suggestVariant("Winter heating", variants)).toBeNull());
+  it("matches the full key, or its short code when only one variant has it", () => {
+    const long = [{ id: "x", adKey: "CS-MS-QUALITY-2026-11-A01" }, { id: "y", adKey: "CS-MS-QUALITY-2026-11-B01" }];
+    expect(suggestVariant("CS-MS-QUALITY-2026-11-A01 | heat", long)?.id).toBe("x");
+    expect(suggestVariant("A01 - Two quotes", long)?.id).toBe("x");
+    expect(suggestVariant("A01 - Two quotes", [...long, { id: "z", adKey: "CS-HP-2026-12-A01" }])).toBeNull();
+  });
 });
 
 describe("deliveryOf", () => {

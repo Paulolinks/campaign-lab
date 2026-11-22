@@ -7,9 +7,10 @@ import { requireBrand } from "@/lib/session";
 import { LinkButton, PageHeader } from "../../ui";
 import { AdPreview, PLACEMENTS, type Placement } from "../ad-preview";
 import { ApprovalBox } from "../approvals/approval-box";
+import { MetaView } from "./meta-view";
 
 type Tab = "campaigns" | "adsets" | "ads";
-type Search = { tab?: string; c?: string; ad?: string; p?: string };
+type Search = { tab?: string; c?: string; ad?: string; p?: string; view?: string; s?: string; period?: string };
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "campaigns", label: "Campanhas", icon: "▣" },
@@ -38,6 +39,23 @@ function DeliveryCell({ d }: { d: Delivery }) {
   );
 }
 
+function ViewSwitch({ view }: { view: "meta" | "plan" }) {
+  const item = (key: "meta" | "plan", label: string) => (
+    <Link
+      href={`/manager?view=${key}`}
+      className={`rounded-lg px-4 py-2 text-sm font-semibold ${view === key ? "bg-[#1877f2] text-white" : "text-soft hover:text-white"}`}
+    >
+      {label}
+    </Link>
+  );
+  return (
+    <div className="mb-4 inline-flex rounded-xl border border-line bg-surface p-1">
+      {item("meta", "Na Meta")}
+      {item("plan", "Planejado no app")}
+    </div>
+  );
+}
+
 const ex = (extra: unknown, key: string) => ((extra ?? {}) as Record<string, string>)[key] ?? null;
 
 export default async function ManagerPage({ searchParams }: { searchParams: Promise<Search> }) {
@@ -45,6 +63,28 @@ export default async function ManagerPage({ searchParams }: { searchParams: Prom
   const tab: Tab = TABS.some((t) => t.key === sp.tab) ? (sp.tab as Tab) : sp.ad ? "ads" : "campaigns";
   const placement: Placement = sp.p === "ig" || sp.p === "story" ? sp.p : "fb";
   const { brand } = await requireBrand();
+  const connected = !!(await db().metaConnection.findUnique({ where: { brandId: brand.id }, select: { id: true } }));
+  const view = sp.view === "plan" || (!connected && sp.view !== "meta") ? "plan" : "meta";
+  if (view === "meta") {
+    return (
+      <>
+        <PageHeader
+          eyebrow={brand.name}
+          title="Gerenciador de anúncios"
+          subtitle="O que está rodando na Meta, com os números da própria Meta. Só leitura: ligar, pausar e orçamento continuam no Gerenciador da Meta."
+        />
+        <ViewSwitch view="meta" />
+        {connected ? (
+          <MetaView brandId={brand.id} currency={brand.currency} timeZone={brand.timezone} sp={sp} />
+        ) : (
+          <div className="rounded-[13px] border border-line bg-surface p-10 text-center text-soft">
+            A Meta ainda não está conectada.{" "}
+            <Link href="/integrations#meta" className="font-semibold text-accent">Conecte em Integrações</Link>.
+          </div>
+        )}
+      </>
+    );
+  }
   const full = await db().brand.findUniqueOrThrow({ where: { id: brand.id }, select: { domain: true, adDailyBudget: true } });
 
   const campaigns = await db().campaignPlan.findMany({
@@ -93,7 +133,7 @@ export default async function ManagerPage({ searchParams }: { searchParams: Prom
 
   const href = (q: Partial<Search>) => {
     const params = new URLSearchParams();
-    const merged = { tab, c: sp.c, ...q };
+    const merged = { view: "plan", tab, c: sp.c, ...q };
     for (const [k, v] of Object.entries(merged)) if (v) params.set(k, v);
     return `/manager?${params}`;
   };
@@ -114,6 +154,7 @@ export default async function ManagerPage({ searchParams }: { searchParams: Prom
         }
       />
 
+      <ViewSwitch view="plan" />
       <div className={`grid gap-4 ${selected ? "2xl:grid-cols-[1fr_520px]" : ""}`}>
         <div className="min-w-0 overflow-hidden rounded-[13px] border border-line bg-surface">
           <div className="flex flex-wrap border-b border-line">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { readableAnswers, type FieldData } from "@/domain/meta-leads";
 import { formatMoney, formatPercent, toCents } from "@/domain/metrics";
 import { db } from "@/lib/db";
 import { CONFIDENCE, ESTIMATE_STATUS, formatDate, LEAD_STATUS, options, PLATFORM } from "@/lib/labels";
@@ -64,11 +65,23 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             <Detail label="Certeza">{CONFIDENCE[lead.sourceConfidence]}</Detail>
             <Detail label="Campanha">{lead.campaign ? <Link className="text-accent hover:underline" href={`/campaigns/${lead.campaign.id}`}>{lead.campaign.name}</Link> : null}</Detail>
             <Detail label="Anúncio">{lead.variant ? <Link className="break-all text-accent hover:underline" href={`/variants/${lead.variant.id}`}>{lead.variant.adKey}</Link> : null}</Detail>
-            <Detail label="Anúncio publicado">{lead.publishedAd ? `${PLATFORM[lead.publishedAd.platform]} ${lead.publishedAd.externalAdId}` : null}</Detail>
+            <Detail label="Anúncio publicado">{lead.publishedAd ? <Link className="text-accent hover:underline" href={`/published/${lead.publishedAd.id}`}>{lead.publishedAd.name ?? `${PLATFORM[lead.publishedAd.platform]} ${lead.publishedAd.externalAdId}`}</Link> : null}</Detail>
             <Detail label="UTM">{[lead.utmSource, lead.utmMedium, lead.utmCampaign, lead.utmContent].filter(Boolean).join(" / ")}</Detail>
             <div className="col-span-2">
               <Detail label="Notas">{lead.notes}</Detail>
             </div>
+            {readableAnswers(lead.formAnswers as FieldData | null).length > 0 && (
+              <div className="col-span-2">
+                <div className="mb-1 text-[11px] uppercase tracking-wide text-soft">Respostas do formulário (Meta)</div>
+                <ul className="flex flex-col gap-1 text-sm">
+                  {readableAnswers(lead.formAnswers as FieldData | null).map((a) => (
+                    <li key={a.question}>
+                      <span className="text-soft">{a.question}:</span> {a.answer}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </Panel>
 

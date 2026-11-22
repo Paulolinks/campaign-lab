@@ -158,17 +158,21 @@ export function targetingSummary(t: Targeting | null | undefined): string | null
 }
 
 /**
- * Suggests the internal variant for a Meta ad when its name carries exactly one variant code ("A01 – Heat pump").
- * Returns null when there is no code or more than one matches: the owner decides.
+ * Suggests the internal variant for a Meta ad when its name carries exactly one variant code: the full key
+ * ("CS-MS-QUALITY-2026-11-A01") or, when it is unique, its short end ("A01"). Null when nothing or more than one
+ * matches: the owner decides.
  */
 export function suggestVariant<T extends { id: string; adKey: string }>(adName: string | null | undefined, variants: T[]): T | null {
   if (!adName) return null;
-  const hits = variants.filter((v) => {
-    const key = v.adKey.trim();
-    if (!key) return false;
-    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const inName = (code: string) => {
+    if (!code) return false;
+    const escaped = code.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return new RegExp(`(^|[^A-Za-z0-9])${escaped}($|[^A-Za-z0-9])`, "i").test(adName);
-  });
+  };
+  const full = variants.filter((v) => inName(v.adKey.trim()));
+  if (full.length) return full.length === 1 ? full[0] : null;
+  const short = (v: T) => /(?:^|-)([A-Za-z]\d{2,3})$/.exec(v.adKey.trim())?.[1] ?? "";
+  const hits = variants.filter((v) => inName(short(v)));
   return hits.length === 1 ? hits[0] : null;
 }
 

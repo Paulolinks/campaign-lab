@@ -2,11 +2,11 @@
 
 | Campo | Valor |
 |---|---|
-| Status | Draft (esclarecimentos respondidos; aguardando aprovação) |
+| Status | In Progress (implementado; aguardando revisão do dono e deploy) |
 | Nível | L3 (tabelas novas + um serviço novo no Docker Compose que agenda a sincronização; ver ADR-0003) |
 | Autor | IA (Claude) + Paulo |
 | Criada em | 2026-11-22 |
-| Aprovada em | — |
+| Aprovada em | 2026-11-22 (Paulo: "Ok, entendi" em resposta a "Posso começar a construir?") |
 | Relacionadas | spec 02 (Resultados), `campanhas/CONECTAR-FACEBOOK.md` (etapa 1 "Só leitura"), ADR-0002, ADR-0003 (proposta), dívida técnica #6 |
 
 ---
@@ -78,7 +78,7 @@ tela de Leads ganha um **pipeline** (colunas por etapa, como a Central de Leads 
   o conjunto e a campanha de onde veio (origem "Meta Lead Ads", certeza "Confirmada").
 - **AC-5.2** — Dado um lead que já existe no app (mesmo ID da Meta, ou mesmo telefone/e-mail), quando ele chega de novo,
   então não é duplicado; o aviso de duplicado que já existe continua valendo.
-- **AC-5.3** — Na primeira sincronização, o app traz os leads antigos que a Meta ainda guarda (cerca de 90 dias).
+- **AC-5.3** — Na primeira sincronização, o app traz os leads antigos que a Meta ainda devolver (a documentação não diz por quanto tempo ela guarda).
 - **AC-5.4** — Lead novo vindo da Meta fica destacado em Leads e no menu com a contagem de "novos sem contato".
 
 ### US-6: Como dono, quero um pipeline para trabalhar os leads
@@ -133,14 +133,14 @@ tela de Leads ganha um **pipeline** (colunas por etapa, como a Central de Leads 
 | `src/domain/meta-sync.ts` (+ `.test.ts`) | criar | Funções puras: converter respostas da Graph API em linhas do banco (orçamento em centavos, status, ações → leads), dividir o período em blocos de 30 dias, decidir o período de cada sincronização, classificar erros (rate limit, token, permissão) |
 | `src/lib/meta.ts` | alterar | `graphGet` ganha paginação (`paging.next`) e parâmetros extras; nada muda no teste de conexão |
 | `src/lib/meta-sync-service.ts` | criar | Roda uma sincronização de uma marca: trava por marca, lê estrutura e insights, grava em transações, registra `MetaSyncRun` e `AuditLog` (sem token) |
-| `src/app/api/internal/meta-sync/route.ts` | criar | Rota interna chamada pelo agendador; exige `SYNC_SECRET` no cabeçalho e só aceita da rede interna do Docker |
+| `src/app/api/internal/meta-sync/route.ts` + `src/lib/meta-sync-key.ts` | criar | Rota interna chamada pelo agendador; exige a chave `x-sync-key`, derivada do `BETTER_AUTH_SECRET` (nenhum segredo novo no servidor) |
 | `src/app/(app)/integrations/actions.ts` / `page.tsx` | alterar | Botão "Sincronizar agora", painel da última sincronização, aviso de moeda/fuso |
 | `src/app/(app)/manager/page.tsx` (+ componentes novos `manager/meta-view.tsx`, `manager/period-picker.tsx`) | alterar/criar | Seletor "Na Meta" / "Planejado no app", período, colunas de métricas |
 | `src/domain/dashboard.ts` / `src/app/(app)/page.tsx` | alterar | Aplicar `pickOneRowPerDay` por anúncio (AC-4.1) |
 | `src/lib/ad-results-service.ts` | alterar | Filtrar anúncios sem variante (AC-4.2) |
 | `src/lib/meta-leads-service.ts` + `src/domain/meta-leads.ts` (+ testes) | criar | Ler os formulários da página e os leads novos; converter respostas em `Lead` (dedupe por ID da Meta, telefone, e-mail) |
 | `src/app/(app)/leads/page.tsx` + `leads/pipeline.tsx` | alterar/criar | Visão Pipeline (colunas por etapa, arrastar e menu no celular) reaproveitando a ação de mudar etapa |
-| `compose.traefik.yaml`, `scripts/vps-setup-env.sh` | alterar | Serviço `scheduler` (mesmo padrão do `backup`) e a variável `SYNC_SECRET` |
+| `compose.traefik.yaml` | alterar | Serviço `scheduler` (mesmo padrão do `backup`): leads a cada 5 min, números a cada 3 h |
 | `context/decisions/0003-meta-sync-scheduler.md` | criar | ADR do agendador sem pg-boss |
 | `context/architecture-context.md`, `context/progress-tracker.md` | alterar | Registrar a decisão e o estado |
 
@@ -153,7 +153,7 @@ runMetaSync(brandId: string, opts: { mode: SyncMode; trigger: SyncTrigger; userI
   Promise<{ ok: true; runId: string; counts: { campaigns: number; adSets: number; ads: number; days: number } }
         | { ok: false; runId: string | null; step: string; message: string; retryAfter?: Date }>
 
-// POST /api/internal/meta-sync  (header x-sync-secret: <SYNC_SECRET>)
+// POST /api/internal/meta-sync?job=metrics|leads  (header x-sync-key: sha256(BETTER_AUTH_SECRET + ":meta-sync"))
 // Roda INCREMENTAL para cada marca com MetaConnection; FULL para a marca que ainda não tem run com sucesso.
 // 200 { brands: [{ brandId, ok, step?, message? }] } · 401 sem segredo
 ```
@@ -163,7 +163,9 @@ Chamadas à Meta (Graph API, versão em `META_GRAPH_VERSION`, padrão atual `v23
 - `act_<id>/adsets` — `id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget,optimization_goal,billing_event,start_time,end_time,targeting`
 - `act_<id>/ads` — `id,name,adset_id,campaign_id,status,effective_status,created_time,creative{thumbnail_url}`
 - `act_<id>/insights` — `level=ad`, `time_increment=1`, `time_range={since,until}`, campos `ad_id,date_start,spend,impressions,reach,frequency,clicks,inline_link_clicks,actions`
-- `<page_id>/leadgen_forms` e `<form_id>/leads` (filtro por data de criação) — `id,created_time,ad_id,adset_id,campaign_id,form_id,field_data`
+- `<ad_id>/leads` — `id,created_time,ad_id,form_id,field_data`, filtro `time_created GREATER_THAN <unix>` (o lead não traz conjunto nem campanha; vêm do anúncio). A Meta pede `leads_retrieval` + `ads_management` + `pages_read_engagement` + `pages_show_list` + `pages_manage_ads` para ler leads (só leitura no app).
+- Totais por período (Gerenciador): `act_<id>/insights` com `level=campaign|adset|ad` e `date_preset` (today, yesterday, last_7d, last_30d, this_month, maximum), sem `time_increment`, porque alcance e frequência não somam entre dias.
+- Todas as chamadas de números usam `use_unified_attribution_setting=true` (mesma atribuição do Gerenciador da Meta).
 - Para incluir arquivados e excluídos nas listas, usar o filtro de `effective_status` correspondente. **Os nomes exatos
   dos campos e filtros serão conferidos na documentação oficial da Marketing API na hora de implementar** (AGENTS.md §3.2).
 
@@ -177,6 +179,7 @@ Chamadas à Meta (Graph API, versão em `META_GRAPH_VERSION`, padrão atual `v23
 - `DailyAdInsight` (já existe): upsert por `(publishedAdId, date, source=META_API)` → substitui, não soma (AC-2.2).
   `platformLeads` = soma das ações de lead; `actions` guarda a lista original para auditoria.
 - `Lead` (já existe): coluna nova `externalLeadId` (único por marca) e `formAnswers` (JSON com as respostas do formulário).
+- `MetaPeriodInsight`: números da Meta por período fixo e nível (campanha/conjunto/anúncio), trocados inteiros a cada sincronização.
 - `MetaSyncRun`: `brandId`, `mode`, `trigger`, `status` (RUNNING/SUCCESS/ERROR), `startedAt`, `finishedAt`, contagens,
   `step`, `error` (texto sem token), `retryAfter`. Uma `RUNNING` com menos de 30 min bloqueia outra da mesma marca (AC-1.3).
 
@@ -224,21 +227,28 @@ Chamadas à Meta (Graph API, versão em `META_GRAPH_VERSION`, padrão atual `v23
 ---
 
 ## 8. Tarefas
-- [ ] T1 — ADR-0003 aceito; conferir campos e filtros na documentação oficial da Marketing API
-- [ ] T2 — Migration aditiva (`MetaCampaign`, `MetaAdSet`, `MetaSyncRun`, colunas em `PublishedAd`)
-- [ ] T3 — `src/domain/meta-sync.ts` + testes (conversões, blocos de datas, erros)
-- [ ] T4 — Paginação em `src/lib/meta.ts`
-- [ ] T5 — `meta-sync-service.ts` (estrutura, insights, trava, registro) + testes de integração (AC-1.x, 2.x)
-- [ ] T6 — Botão e painel de sincronização em Integrações
-- [ ] T7 — Rota interna + serviço `scheduler` no Compose + `SYNC_SECRET`
-- [ ] T8 — Dashboard e Resultados com uma linha por dia; Resultados sem anúncios não ligados (AC-4.x)
-- [ ] T9 — Gerenciador: visão "Na Meta", período, colunas, vínculo (AC-3.x) + e2e
-- [ ] T9b — Leads da Meta a cada 5 min + leads antigos na 1ª vez (AC-5.x) + testes
-- [ ] T9c — Pipeline em Leads (AC-6.x) + e2e
+- [x] T1 — ADR-0003 aceito; conferir campos e filtros na documentação oficial da Marketing API
+- [x] T2 — Migration aditiva (`MetaCampaign`, `MetaAdSet`, `MetaSyncRun`, colunas em `PublishedAd`)
+- [x] T3 — `src/domain/meta-sync.ts` + testes (conversões, blocos de datas, erros)
+- [x] T4 — Paginação em `src/lib/meta.ts`
+- [x] T5 — `meta-sync-service.ts` (estrutura, insights, trava, registro) + testes de integração (AC-1.x, 2.x)
+- [x] T6 — Botão e painel de sincronização em Integrações
+- [x] T7 — Rota interna + serviço `scheduler` no Compose + `SYNC_SECRET`
+- [x] T8 — Dashboard e Resultados com uma linha por dia; Resultados sem anúncios não ligados (AC-4.x)
+- [x] T9 — Gerenciador: visão "Na Meta", período, colunas, vínculo (AC-3.x) + e2e
+- [x] T9b — Leads da Meta a cada 5 min + leads antigos na 1ª vez (AC-5.x) + testes
+- [x] T9c — Pipeline em Leads (AC-6.x) + e2e
 - [ ] T10 — Deploy, sincronização real com o dono, atualizar `architecture-context.md` e `progress-tracker.md`
 
 ## 9. Aprovação
 - [ ] **Aprovado pelo humano** — 
 
 ## 10. Notas de implementação
-- 
+- 2026-11-22: docs da Meta conferidas (Graph API v25/v26): insights com `level`, `time_increment`, `time_range`, `filtering`, limite de 37 meses (erro 3018); desde 12/01/2026 algumas quebras únicas e horárias só têm 13 meses, mas os totais continuam com 37. Leads: `/<ad_id>/leads` com filtro `time_created`. Listar formulários da página não é documentado para leitura, por isso o app lê os leads por anúncio.
+- Anúncios arquivados/excluídos que a Meta não lista mais entram pelo próprio relatório de números (nome, conjunto e campanha vêm na linha), para o histórico não perder gasto.
+- Lead com mesmo telefone/e-mail de um lead já cadastrado à mão: o app junta (grava o ID da Meta e as respostas no lead existente) em vez de criar outro.
+- Sugestão de vínculo: casa o código completo da variante ou, se for único, o final curto (ex.: "A01").
+- `PublishedAd.lastSyncAt` preenchido = anúncio lido da Meta. Resultados esconde só os lidos da Meta sem variante.
+- Testes: 33+ unitários novos (`meta-sync`, `meta-leads`, `oneRowPerAdDay`) e 2 e2e (Gerenciador "Na Meta" e Pipeline). O serviço de sincronização foi testado contra uma Meta falsa (paginação, anúncio arquivado, releitura sem duplicar, lead sem duplicar).
+- e2e pré-existente corrigido: o texto do anúncio aparece duas vezes (conteúdo + prévia) desde a prévia de aprovação; o teste agora usa `.first()`.
+- Pendente: deploy e conferência real com o dono (T10).

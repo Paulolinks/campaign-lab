@@ -1,3 +1,4 @@
+import { db } from "@/lib/db";
 import { getBrandContext, requireUser } from "@/lib/session";
 import { signOut } from "../actions";
 import { Logo } from "../ui";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
   const { brands, brand } = await getBrandContext(user);
+  const newLeads = brand ? await db().lead.count({ where: { brandId: brand.id, status: "NEW" } }) : 0;
 
   return (
     <div className="min-h-screen md:grid md:grid-cols-[245px_minmax(0,1fr)]">
@@ -17,7 +19,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <Logo />
         </div>
         <div className="mx-3 mb-2 hidden text-[10px] font-extrabold tracking-[1.3px] text-[#758ba7] md:block">WORKSPACE</div>
-        <Nav />
+        <Nav newLeads={newLeads} />
         <div className="mx-1.5 mt-7 hidden border-t border-line pt-4 text-[11px] text-[#91a3ba] md:block">
           <div className="truncate">{user.name}</div>
           <div className="truncate">{user.email}</div>
