@@ -16,7 +16,8 @@ const NAV = [
   { href: "/integrations", label: "Integrações", icon: "⚙" },
 ];
 
-export function Nav() {
+/** `newLeads` = leads still in "Novo" (not contacted yet): shown as a badge on Leads. */
+export function Nav({ newLeads = 0 }: { newLeads?: number }) {
   const pathname = usePathname();
   return (
     <nav className="flex gap-1 md:flex-col">
@@ -33,6 +34,11 @@ export function Nav() {
           >
             <span className="w-5 text-center text-base">{item.icon}</span>
             {item.label}
+            {item.href === "/leads" && newLeads > 0 && (
+              <span className="ml-auto rounded-full bg-warn px-1.5 text-[10px] font-bold text-[#1b1407]" title="Leads novos sem contato">
+                {newLeads}
+              </span>
+            )}
           </Link>
         );
       })}

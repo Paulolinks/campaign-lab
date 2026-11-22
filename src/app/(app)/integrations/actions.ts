@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { normalizeAdAccountId, normalizePageId } from "@/domain/meta-check";
 import type { ActionState } from "@/lib/action-state";
 import { audit } from "@/lib/audit";
 import { db } from "@/lib/db";
 import { metaCredentials, sealSecret, testMetaConnection, type MetaTestResult } from "@/lib/meta";
+import { isSyncRunning, nextMetricsKind, runMetaSync } from "@/lib/meta-sync-service";
 import { requireBrand, requireEditor } from "@/lib/session";
 
 async function recordTest(brandId: string, user: { id: string; workspaceId: string }, result: MetaTestResult, accountId: string) {
@@ -82,4 +84,29 @@ export async function removeMetaConnection(): Promise<ActionState> {
   await audit({ workspaceId: user.workspaceId, userId: user.id, brandId: brand.id, action: "meta.connection_removed", entity: "Integration", entityId: "META" });
   revalidatePath("/", "layout");
   return { ok: "Token apagado do app." };
+}
+
+async function startSync(kind: "FULL" | "INCREMENTAL" | null): Promise<ActionState> {
+  const user = await requireEditor();
+  const { brand } = await requireBrand();
+  if (!(await db().metaConnection.findUnique({ where: { brandId: brand.id }, select: { id: true } }))) return { error: "Salve o token primeiro." };
+  const metricsKind = kind ?? (await nextMetricsKind(brand.id));
+  if (await isSyncRunning(brand.id, metricsKind)) return { error: "Já está sincronizando. Espere terminar e atualize a página." };
+  // The history can take minutes: answer now and keep reading from Meta after the response.
+  after(async () => {
+    const metrics = await runMetaSync(brand.id, { kind: metricsKind, trigger: "MANUAL", userId: user.id });
+    if (metrics.ok) await runMetaSync(brand.id, { kind: "LEADS", trigger: "MANUAL", userId: user.id });
+  });
+  revalidatePath("/", "layout");
+  return { ok: metricsKind === "FULL" ? "Começou a puxar todo o histórico. Pode levar alguns minutos; atualize a página para ver." : "Sincronizando. Atualize a página em alguns segundos." };
+}
+
+/** "Sincronizar agora": recent days (or the whole history the first time), then the form leads. Only reads from Meta. */
+export async function syncMetaNow(): Promise<ActionState> {
+  return startSync(null);
+}
+
+/** "Recarregar todo o histórico": reads everything Meta keeps again (replaces, never adds twice). */
+export async function syncMetaFull(): Promise<ActionState> {
+  return startSync("FULL");
 }

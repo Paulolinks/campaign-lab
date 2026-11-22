@@ -29,7 +29,8 @@ flowchart LR
 | Domínio | Importador CSCAMP/1, métricas, atribuição, CRM | TypeScript puro (testável sem banco) | `src/domain` |
 | Provedores | Interfaces `AdsProvider`, `AnalyticsProvider`, `AssetStorageProvider`, `LeadInboxProvider` + modo fake | TypeScript | `src/providers` |
 | Dados | Schema e migrations (sem seeds DEMO: nenhum dado fictício) | Prisma + PostgreSQL | `prisma/` |
-| Worker | Jobs (sync Meta, envio ao Drive) com retry/backoff — **ainda não criado** (nada assíncrono no MVP atual) | pg-boss (processo separado, como o publisher) | `src/worker` |
+| Sync Meta (spec 04) | Leitura da Meta: estrutura, números por dia e por período, leads dos formulários. Agendador `scheduler` no Compose chama `/api/internal/meta-sync` (ADR-0003) | Next.js + `after()` + trava em `MetaSyncRun` | `src/lib/meta-sync-service.ts` |
+| Worker | Jobs pesados (envio ao Drive) com retry/backoff — **ainda não criado** | pg-boss quando o Drive entrar (ADR-0003) | `src/worker` |
 
 ## 3. Stack (espelha o `publisher` do Social Media Automation — ADR-0002)
 | Camada | Tecnologia | Versão | Por quê |

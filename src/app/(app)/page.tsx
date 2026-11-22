@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { oneRowPerAdDay } from "@/domain/ad-results";
 import { aggregate, periodStart } from "@/domain/dashboard";
 import { formatMoney, formatPercent, formatRatio } from "@/domain/metrics";
 import { db } from "@/lib/db";
@@ -15,7 +16,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const since = periodStart(days);
   const cur = brand.currency;
 
-  const [leads, insights, campaigns, unlinkedAds, variantsWithoutMedia, lastInsight] = await Promise.all([
+  const [leads, allInsights, campaigns, unlinkedAds, variantsWithoutMedia, lastInsight] = await Promise.all([
     db().lead.findMany({
       where: { brandId: brand.id, createdAt: { gte: since } },
       select: {
@@ -29,14 +30,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     }),
     db().dailyAdInsight.findMany({
       where: { date: { gte: since }, publishedAd: { brandId: brand.id } },
-      select: { spend: true, impressions: true, linkClicks: true, source: true, publishedAd: { select: { variant: { select: { angle: true } } } } },
+      select: { publishedAdId: true, date: true, spend: true, impressions: true, linkClicks: true, source: true, publishedAd: { select: { variant: { select: { angle: true } } } } },
     }),
     db().campaignPlan.count({ where: { brandId: brand.id } }),
-    db().publishedAd.count({ where: { brandId: brand.id, variantId: null } }),
+    // Old ads read from Meta are expected to be unlinked; only manual ones and ads running now count as a gap.
+    db().publishedAd.count({ where: { brandId: brand.id, variantId: null, OR: [{ lastSyncAt: null }, { effectiveStatus: "ACTIVE" }] } }),
     db().adVariant.count({ where: { brandId: brand.id, assets: { none: {} } } }),
     db().dailyAdInsight.findFirst({ where: { publishedAd: { brandId: brand.id } }, orderBy: { ingestedAt: "desc" }, select: { ingestedAt: true, source: true } }),
   ]);
 
+  // Same ad and day from Manual, CSV and Meta: keep one row (Meta > CSV > Manual) so spend is never counted twice.
+  const insights = oneRowPerAdDay(allInsights);
   const r = aggregate(
     leads.map((l) => ({
       status: l.status,

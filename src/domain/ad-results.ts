@@ -163,3 +163,8 @@ export function pickOneRowPerDay<T extends { day: string; source: string }>(rows
   }
   return [...best.values()].sort((a, b) => a.day.localeCompare(b.day));
 }
+
+/** pickOneRowPerDay across many ads: one row per ad and day (used by the Dashboard). */
+export function oneRowPerAdDay<T extends { publishedAdId: string; date: Date; source: string }>(rows: T[]): T[] {
+  return pickOneRowPerDay(rows.map((r) => ({ ...r, day: `${r.publishedAdId}|${r.date.toISOString().slice(0, 10)}` })));
+}

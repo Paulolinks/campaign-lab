@@ -89,6 +89,7 @@ export async function changeLeadStatus(leadId: string, _: ActionState, data: For
     db().leadStatusChange.create({ data: { leadId, from: lead.status, to: to.data, userId: user.id } }),
   ]);
   revalidatePath(`/leads/${leadId}`);
+  revalidatePath("/leads");
   return { ok: "Etapa atualizada." };
 }
 

@@ -65,6 +65,23 @@ services:
         condition: service_healthy
     networks: [internal]
 
+  # Meta read-only sync (spec 04, ADR-0003): leads every 5 minutes, numbers every 3 hours.
+  # Calls the app on the internal network; the key is derived from BETTER_AUTH_SECRET (src/lib/meta-sync-key.ts).
+  scheduler:
+    image: alpine:3.20
+    restart: unless-stopped
+    env_file: .env
+    entrypoint: >
+      sh -c 'KEY=$$(printf "%s" "$$BETTER_AUTH_SECRET:meta-sync" | sha256sum | cut -d" " -f1);
+      call() { wget -q -T 30 -O /dev/null --header "x-sync-key: $$KEY" --post-data "" "http://app:3000/api/internal/meta-sync?job=$$1" || echo "meta-sync $$1 falhou"; };
+      sleep 120; n=0;
+      while true; do
+        if [ $$((n % 36)) -eq 0 ]; then call metrics; sleep 60; fi;
+        call leads; n=$$((n + 1)); sleep 300;
+      done'
+    depends_on: [app]
+    networks: [internal]
+
 volumes:
   pgdata:
   media:
