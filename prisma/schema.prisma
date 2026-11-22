@@ -88,6 +88,7 @@ model Workspace {
   members   WorkspaceMember[]
   brands    Brand[]
   auditLogs AuditLog[]
+  agentKeys AgentAccessKey[]
 
   @@map("workspace")
 }
@@ -121,6 +122,23 @@ model AuditLog {
   @@index([workspaceId, createdAt])
   @@index([entity, entityId])
   @@map("audit_log")
+}
+
+/// Read-only key for the marketing analyst (Claude), spec 05. Only the SHA-256 of the key is stored.
+model AgentAccessKey {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name        String
+  keyHash     String    @unique
+  last4       String
+  createdById String
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+
+  @@index([workspaceId])
+  @@map("agent_access_key")
 }
 
 // ---------- Brands (each brand's data is isolated by brandId) ----------
@@ -556,6 +574,8 @@ model PublishedAd {
   /// Meta effective_status (ACTIVE, PAUSED, CAMPAIGN_PAUSED, ARCHIVED, DELETED...). Filled by the sync.
   effectiveStatus    String?
   thumbnailUrl       String?
+  /// Ad text and media from the Meta creative (title, body, cta, link...), see src/domain/agent-access.ts.
+  creative           Json?
   externalCreatedAt  DateTime?
   /// Internal life cycle (spec 02). Independent of the platform status.
   lifecycle          AdLifecycle      @default(TESTING)

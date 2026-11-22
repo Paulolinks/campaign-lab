@@ -6,11 +6,11 @@
 ## Estado atual
 - **Fase:** M3 — MVP no ar em https://ads.coolseasonllc.com (VPS, desde 2026-11-15). Atualizar: `sh scripts/deploy.sh`
 - **Foco agora:** seguir o roteiro do GUIA-agente-marketing.md: CSV do Ads Manager → spec 03 (criar anúncios pelo Claude Code nas pastas). Spec 02 (Resultados) no ar desde 2026-11-21
-- **Spec ativa:** `context/feature-specs/04-meta-read-only-sync.md` (In Progress: implementada no PR #1, branch `spec/04-meta-read-only`; falta deploy + o dono colar o token em Integrações e conferir os números). Última concluída: `context/feature-specs/02-ad-results-and-decisions.md` (Done), que também tem o roteiro das specs 03–07
+- **Spec ativa:** `context/feature-specs/05-agent-read-access.md` (acesso só leitura do Claude; falta deploy e guardar a chave no ambiente do Claude). Spec 04 (Meta só leitura) mergeada no PR #1; token já conectado em Integrações (conta Paulo 2023); falta deploy e conferir números. Última concluída: `context/feature-specs/02-ad-results-and-decisions.md` (Done), que também tem o roteiro das specs 03–07
 - **Última atualização:** 2026-11-22
 
 ## O que funciona (verificado por teste)
-Evidência: `npm test` (136 testes) e `npm run test:e2e` (16 testes Playwright no navegador), todos verdes em 2026-11-22.
+Evidência: `npm test` (verify verde) e `npm run test:e2e` (17 testes Playwright no navegador), todos verdes em 2026-11-22.
 - Login do dono (primeiro acesso em `/setup`, só uma vez) com Better Auth; limite de tentativas de login.
 - Várias marcas isoladas por `brandId`; seletor de marca no topo; persona versionada (carrega `.md`); termos proibidos por marca; contas/canais por marca (ficam "Desconectado").
 - Modelo para IA (Importar → passo 1): baixar ou copiar um .txt personalizado com marca, persona, termos proibidos e o formato; aceita a resposta da IA dentro de bloco ```.
@@ -21,6 +21,7 @@ Evidência: `npm test` (136 testes) e `npm run test:e2e` (16 testes Playwright n
 - Leads: origem/certeza/campanha/anúncio/UTM, aviso de duplicado por telefone/e-mail, etapas com histórico, orçamentos, contrato com custos diretos e margem.
 - **Resultados por anúncio (spec 02):** tela `/results` (Em teste / Vivos / Encerrados, "O que fazer hoje", placar por ângulo) e `/published/[id]` (estratégia, período, 5 números principais + "Números da Meta" + "Dinheiro", veredito com o porquê, diagnóstico "o que aconteceu", decisão com aprendizado e linha do tempo). Metas e regras na marca (US$ 20/anúncio/dia, custo por visita, teto/dia). O app só sugere: não pausa nada na Meta.
 - **Meta só leitura (spec 04, branch do PR #1, ainda não no ar):** Integrações → Sincronizar agora / Recarregar todo o histórico + painel da última execução; agendador (leads 5 min, números 3 h); Gerenciador "Na Meta" (campanhas/conjuntos/anúncios com as colunas da Meta por período, sugestão de vínculo pelo código da variante) e "Planejado no app"; leads dos formulários entram sozinhos (sem duplicar); Leads com visão Pipeline (arrastar ou menu no celular) e Lista; respostas do formulário no detalhe do lead.
+- **Acesso do Claude (spec 05):** Integrações → criar/revogar chave só leitura; API `/api/agent/v1/brands` e `/brands/{id}/export` (sem PII de lead); sync guarda o texto dos anúncios.
 - Dashboard: gasto, leads, qualificados, orçamentos, contratos, contribuição após mídia, CPL, CPQL, CAC, fechamento, margem, ROAS, CPM, CTR; funil; comparativo por ângulo; qualidade dos dados. Sem dado = `N/D`.
 
 ## Próximos passos (em ordem)
@@ -54,6 +55,10 @@ Evidência: `npm test` (136 testes) e `npm run test:e2e` (16 testes Playwright n
 | 5 | Vitest falha inteiro ("failed to find the current suite") quando roda a partir de `d:\` minúsculo, como a trava de fim de turno faz no Windows | Verify vermelho falso | `scripts/run-unit-tests.mjs` normaliza a letra do drive | Resolvido; levar a correção para o AI Project Starter |
 
 ## Log de sessões (mais recente primeiro, máx. 5)
+### 2026-11-22 (noite: conexão Meta + spec 05)
+- **Feito:** PR #1 mergeado; dono conectou o token (usuário do sistema "Conversions API System User", app CS Confort time, conta act_130648509720231, página 204090258310772). Spec 05: chave de acesso do Claude, API de exportação só leitura, texto dos anúncios no sync.
+- **Decidido:** o Claude é o analista e lê o app sozinho (nada de o dono exportar CSV); PII de lead nunca sai pela API.
+- **Pendente:** deploy; dono cria a chave em Integrações e guarda no ambiente do Claude; primeira análise do histórico.
 ### 2026-11-22 (spec 04: Meta só leitura + leads + pipeline)
 - **Feito:** spec 04 + ADR-0003; sincronização da Meta (campanhas, conjuntos, anúncios, números por dia com histórico de 37 meses, totais por período, leads dos formulários), botão Sincronizar e agendador (leads 5 min, números 3 h), Gerenciador "Na Meta" com as colunas da Meta, Pipeline de leads, badge de leads novos, dívida #6 resolvida (Dashboard uma linha por anúncio/dia). Testes: unit + 16 e2e verdes.
 - **Decidido:** dono quer ver as mesmas métricas da Meta, histórico completo, leads chegando sozinhos e pipeline; detalhes técnicos ficam com a IA (sem jargão nas perguntas).

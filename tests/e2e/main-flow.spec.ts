@@ -397,3 +397,32 @@ test("leads pipeline: a Meta form lead shows its answers and moves between stage
   await expect(page.getByText("Heat pump")).toBeVisible();
   await expect(page.getByText("Contatado").first()).toBeVisible();
 });
+
+test("analyst key: owner creates it once, it reads the brand without lead PII, and revoking blocks it", async ({ page, request }) => {
+  await login(page);
+  await page.goto("/integrations");
+  await page.getByRole("button", { name: "Criar chave de acesso do Claude" }).click();
+  const key = (await page.getByTestId("agent-key").textContent())!.trim();
+  expect(key).toMatch(/^clab_/);
+
+  expect((await request.get("/api/agent/v1/brands")).status()).toBe(401);
+  const brands = await request.get("/api/agent/v1/brands", { headers: { "x-agent-key": key } });
+  expect(brands.status()).toBe(200);
+  const cool = (await brands.json()).brands.find((b: { name: string }) => b.name === "Cool Season");
+
+  const res = await request.get(`/api/agent/v1/brands/${cool.id}/export`, { headers: { authorization: `Bearer ${key}` } });
+  expect(res.status()).toBe(200);
+  const body = await res.text();
+  const data = JSON.parse(body);
+  expect(data.ads.some((a: { externalAdId: string }) => a.externalAdId === "333")).toBe(true);
+  const lead = data.leads.find((l: { externalLeadId: string }) => l.externalLeadId === "L1");
+  expect(lead.answers).toEqual([{ name: "what_service_do_you_need?", values: ["Heat pump"] }]);
+  expect(body).not.toContain("Mary Form");
+  expect(body).not.toContain("+14045550123");
+
+  await page.reload();
+  await expect(page.getByText("usada em")).toBeVisible();
+  await page.getByRole("button", { name: "Revogar" }).click();
+  await expect(page.getByRole("button", { name: "Revogar" })).toHaveCount(0);
+  expect((await request.get("/api/agent/v1/brands", { headers: { "x-agent-key": key } })).status()).toBe(401);
+});
