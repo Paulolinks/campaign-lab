@@ -6,7 +6,7 @@
 ## Estado atual
 - **Fase:** M3 — MVP no ar em https://ads.coolseasonllc.com (VPS, desde 2026-11-15). Atualizar: `sh scripts/deploy.sh`
 - **Foco agora:** seguir o roteiro do GUIA-agente-marketing.md: CSV do Ads Manager → spec 03 (criar anúncios pelo Claude Code nas pastas). Spec 02 (Resultados) no ar desde 2026-11-21
-- **Spec ativa:** `context/feature-specs/04-meta-read-only-sync.md` (Clarifying, 2026-11-22: 5 perguntas para o dono; ADR-0003 proposto). Última concluída: `context/feature-specs/02-ad-results-and-decisions.md` (Done), que também tem o roteiro das specs 03–07
+- **Spec ativa:** `context/feature-specs/04-meta-read-only-sync.md` (perguntas respondidas em 2026-11-22; inclui leads da Meta + pipeline; aguardando aprovação). Última concluída: `context/feature-specs/02-ad-results-and-decisions.md` (Done), que também tem o roteiro das specs 03–07
 - **Última atualização:** 2026-11-21
 
 ## O que funciona (verificado por teste)

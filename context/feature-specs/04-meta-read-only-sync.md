@@ -1,8 +1,8 @@
-# Spec 04 — Meta somente leitura: campanhas, conjuntos, anúncios e métricas diárias no Gerenciador
+# Spec 04 — Meta somente leitura: Gerenciador com as métricas da Meta + leads dos formulários num pipeline
 
 | Campo | Valor |
 |---|---|
-| Status | Clarifying |
+| Status | Draft (esclarecimentos respondidos; aguardando aprovação) |
 | Nível | L3 (tabelas novas + um serviço novo no Docker Compose que agenda a sincronização; ver ADR-0003) |
 | Autor | IA (Claude) + Paulo |
 | Criada em | 2026-11-22 |
@@ -21,7 +21,10 @@ Esta spec liga a primeira etapa do `CONECTAR-FACEBOOK.md`: com as credenciais qu
 anúncios e as métricas de cada anúncio por dia, inclusive o histórico, e mostra isso no Gerenciador. A tela Resultados
 (spec 02) e o Dashboard passam a usar esses números sem digitação.
 
-**Somente leitura:** a única permissão usada é `ads_read`. O app não cria, liga, pausa nem muda orçamento na Meta.
+Na mesma spec (pedido do dono em 2026-11-22), os leads dos formulários da Meta passam a chegar sozinhos no app, e a
+tela de Leads ganha um **pipeline** (colunas por etapa, como a Central de Leads da Meta) para mover e trabalhar cada lead.
+
+**Somente leitura:** as permissões usadas são `ads_read` (números) e `leads_retrieval` (leads). O app não cria, liga, pausa nem muda orçamento na Meta.
 
 ## 2. Histórias de usuário e critérios de aceite
 
@@ -31,7 +34,6 @@ anúncios e as métricas de cada anúncio por dia, inclusive o histórico, e mos
   arquivados) e grava nome, status, objetivo, orçamento e datas de cada um.
 - **AC-1.2** — Dado a primeira sincronização de uma marca, quando ela termina, então as métricas diárias de cada anúncio
   estão salvas desde o primeiro dia com gasto até ontem, limitado ao que a Meta guarda (cerca de 37 meses).
-  [NEEDS CLARIFICATION: Q3]
 - **AC-1.3** — Dado uma sincronização em andamento, quando eu clico de novo, então o app avisa "já está sincronizando"
   e não começa outra.
 - **AC-1.4** — Dado uma sincronização qualquer, quando ela termina, então Integrações mostra quando foi, quanto tempo
@@ -41,7 +43,7 @@ anúncios e as métricas de cada anúncio por dia, inclusive o histórico, e mos
 
 ### US-2: Como dono, quero que os números se atualizem sozinhos
 - **AC-2.1** — Dado a conexão ativa, então o app sincroniza sozinho a cada 3 horas (estrutura + métricas dos últimos 7
-  dias, incluindo hoje). [NEEDS CLARIFICATION: Q2]
+  dias, incluindo hoje).
 - **AC-2.2** — Dado que a Meta corrige os números dos últimos dias (atribuição atrasada), quando a sincronização relê esse
   período, então o valor salvo é **substituído**, nunca somado.
 - **AC-2.3** — Dado que o token foi apagado, expirou ou perdeu `ads_read`, quando a sincronização automática roda, então
@@ -50,10 +52,10 @@ anúncios e as métricas de cada anúncio por dia, inclusive o histórico, e mos
 
 ### US-3: Como dono, quero ver no Gerenciador o que está rodando na Meta
 - **AC-3.1** — Dado a marca conectada, quando abro o Gerenciador, então vejo a visão **"Na Meta"** com as abas Campanhas,
-  Conjuntos e Anúncios, com os nomes, status e orçamentos reais da Meta. [NEEDS CLARIFICATION: Q1]
+  Conjuntos e Anúncios, com os nomes, status e orçamentos reais da Meta.
 - **AC-3.2** — Dado a visão "Na Meta", quando escolho um período (Hoje, Ontem, 7 dias, 30 dias, Este mês, Máximo), então
-  cada linha mostra no período: valor usado, impressões, alcance, cliques no link, CTR, CPM, resultados (leads da Meta)
-  e custo por resultado. Campanha e conjunto somam os anúncios deles. [NEEDS CLARIFICATION: Q5]
+  cada linha mostra as mesmas colunas do Gerenciador da Meta: resultados (leads da Meta), custo por resultado, valor
+  usado, alcance, impressões, frequência, CPM, cliques no link, CPC e CTR. Campanha e conjunto somam os anúncios deles.
 - **AC-3.3** — Dado um anúncio da Meta, então a linha mostra se ele está ligado a uma variante do app (com link) ou um
   botão **"Ligar à variante"** que abre o vínculo que já existe em Publicados.
 - **AC-3.4** — O interruptor Lig./Desl. mostra o status real da Meta (`effective_status`) e continua só de leitura, com a
@@ -66,8 +68,27 @@ anúncios e as métricas de cada anúncio por dia, inclusive o histórico, e mos
 - **AC-4.1** — Dado um dia de um anúncio com números de mais de uma fonte (Manual, CSV, Meta), então Resultados **e
   Dashboard** usam uma linha só por dia, na prioridade Meta > CSV > Manual (resolve a dívida técnica #6).
 - **AC-4.2** — Dado anúncios puxados da Meta que **não** estão ligados a uma variante, então eles entram no gasto total do
-  Dashboard, mas não aparecem em Resultados até serem ligados. [NEEDS CLARIFICATION: Q4]
+  Dashboard, mas não aparecem em Resultados até serem ligados. Quando o nome do anúncio na Meta tem o código de uma
+  variante (ex.: "A01"), o Gerenciador sugere o vínculo e o dono confirma com um clique.
 - **AC-4.3** — Lançar métrica manual continua possível; quando a Meta tem o mesmo dia, a tela mostra o número da Meta.
+
+### US-5: Como dono, quero que o lead do formulário da Meta chegue sozinho no app
+- **AC-5.1** — Dado um formulário instantâneo da Meta ligado à página da marca, quando alguém preenche, então em até
+  5 minutos o lead aparece em Leads na etapa "Novo", com nome, telefone, e-mail, as respostas do formulário, o anúncio,
+  o conjunto e a campanha de onde veio (origem "Meta Lead Ads", certeza "Confirmada").
+- **AC-5.2** — Dado um lead que já existe no app (mesmo ID da Meta, ou mesmo telefone/e-mail), quando ele chega de novo,
+  então não é duplicado; o aviso de duplicado que já existe continua valendo.
+- **AC-5.3** — Na primeira sincronização, o app traz os leads antigos que a Meta ainda guarda (cerca de 90 dias).
+- **AC-5.4** — Lead novo vindo da Meta fica destacado em Leads e no menu com a contagem de "novos sem contato".
+
+### US-6: Como dono, quero um pipeline para trabalhar os leads
+- **AC-6.1** — Dado a tela Leads, quando escolho a visão **Pipeline**, então vejo uma coluna por etapa (Novo, Contatado,
+  Qualificado, Visita marcada, Visita feita, Orçamento enviado, Ganho, Perdido) com um cartão por lead.
+- **AC-6.2** — Quando arrasto um cartão para outra coluna (ou uso o menu do cartão no celular), então a etapa muda e
+  fica no histórico do lead, igual à mudança de etapa que já existe hoje.
+- **AC-6.3** — O cartão mostra nome, telefone (toque para ligar), há quanto tempo entrou e o anúncio de origem; abrir o
+  cartão leva ao detalhe do lead que já existe (notas, orçamentos, contrato).
+- **AC-6.4** — A visão em lista de hoje continua disponível.
 
 ### Casos de borda e erros
 - **Sem conexão salva:** Gerenciador mostra só "Planejado no app" e um aviso com link para Integrações.
@@ -83,20 +104,23 @@ anúncios e as métricas de cada anúncio por dia, inclusive o histórico, e mos
 
 ## 3. Fora de escopo
 - Criar, ligar, pausar ou mudar orçamento na Meta (spec 07; continua não-objetivo).
-- Puxar os leads dos formulários (`leads_retrieval`) e webhook (spec 06).
+- Receber lead por webhook (instantâneo); aqui o app confere a cada 5 minutos.
+- Responder ou mandar mensagem ao lead pela Meta, WhatsApp ou e-mail.
 - Criativos completos (vídeo/imagem do anúncio); só o nome e, se a Meta devolver, a miniatura.
 - Quebras por idade, gênero, posicionamento ou região.
 - Instagram/Facebook orgânico, Google Ads.
 - Avisos por Telegram (spec 05).
 
 ## 4. Esclarecimentos
-| # | Pergunta | Opções | Recomendação | Resposta | Data |
-|---|---|---|---|---|---|
-| 1 | Como o Gerenciador mostra os dados da Meta? | (a) Duas visões com seletor: **"Na Meta"** (padrão quando conectado) e **"Planejado no app"** (a tela atual). (b) Uma tela só, misturando o planejado com o real. (c) Tela nova separada. | (a): o real e o planejado têm estruturas diferentes (na Meta um conjunto pode ter vários anúncios); misturar confunde, e a tela atual de aprovação fica intacta | | |
-| 2 | Com que frequência sincronizar sozinho? | (a) A cada 3 h + botão. (b) 1 vez por dia às 7h + botão. (c) Só no botão por enquanto. | (a): Resultados fica atual durante o dia; são poucas chamadas para uma conta pequena | | |
-| 3 | Quanto histórico puxar na primeira vez? | (a) Tudo que a Meta guarda (~37 meses). (b) Últimos 12 meses. (c) Últimos 90 dias. | (a): é uma vez só e dá a base para o agente de marketing aprender com tudo que já rodou | | |
-| 4 | Anúncios antigos da Meta sem variante no app: o que fazer? | (a) Ficam só no Gerenciador e no gasto total; entram em Resultados quando ligados. (b) Entram em Resultados como "Encerrados". (c) O app sugere o vínculo quando o nome do anúncio na Meta tem o código da variante (ex.: "A01") e você confirma. | (a) + (c): Resultados continua limpo e o vínculo fica rápido sem o app decidir sozinho | | |
-| 5 | O que é "Resultado" na visão Na Meta? | (a) Leads da Meta (formulário + leads do site/pixel). (b) O resultado que cada campanha otimiza (o mesmo da coluna "Resultados" da Meta). | (a) agora, porque todas as campanhas da Cool Season são de leads; (b) vira melhoria quando houver campanha de outro objetivo | | |
+| # | Pergunta | Resposta | Data |
+|---|---|---|---|
+| 1 | Como o Gerenciador mostra os dados da Meta? | Visão "Na Meta" com as mesmas métricas do Gerenciador da Meta; a tela atual continua como "Planejado no app" | 2026-11-22 |
+| 2 | Atualizar sozinho? | Sim, sozinho + botão "Sincronizar agora". Números a cada 3 h; leads a cada 5 min | 2026-11-22 |
+| 3 | Quanto histórico? | Tudo que a Meta guardar, para análise e planejamento das próximas propagandas | 2026-11-22 |
+| 4 | Anúncios antigos sem variante no app | Dono não precisa decidir: ficam no Gerenciador e no gasto total; em Resultados só os ligados; o app sugere o vínculo pelo código no nome | 2026-11-22 |
+| 5 | O que é "Resultado"? | Leads da Meta | 2026-11-22 |
+| 6 | Leads | Dono pediu (2026-11-22): leads dos formulários chegam sozinhos + pipeline por etapas, "que nem tem lá" | 2026-11-22 |
+| 7 | Como agendar a atualização automática | Detalhe técnico decidido pela IA: agendador simples no Docker (ADR-0003), sem instalar programa novo | 2026-11-22 |
 
 ---
 
@@ -113,7 +137,9 @@ anúncios e as métricas de cada anúncio por dia, inclusive o histórico, e mos
 | `src/app/(app)/integrations/actions.ts` / `page.tsx` | alterar | Botão "Sincronizar agora", painel da última sincronização, aviso de moeda/fuso |
 | `src/app/(app)/manager/page.tsx` (+ componentes novos `manager/meta-view.tsx`, `manager/period-picker.tsx`) | alterar/criar | Seletor "Na Meta" / "Planejado no app", período, colunas de métricas |
 | `src/domain/dashboard.ts` / `src/app/(app)/page.tsx` | alterar | Aplicar `pickOneRowPerDay` por anúncio (AC-4.1) |
-| `src/lib/ad-results-service.ts` | alterar | Filtrar anúncios sem variante (AC-4.2, se Q4 = a) |
+| `src/lib/ad-results-service.ts` | alterar | Filtrar anúncios sem variante (AC-4.2) |
+| `src/lib/meta-leads-service.ts` + `src/domain/meta-leads.ts` (+ testes) | criar | Ler os formulários da página e os leads novos; converter respostas em `Lead` (dedupe por ID da Meta, telefone, e-mail) |
+| `src/app/(app)/leads/page.tsx` + `leads/pipeline.tsx` | alterar/criar | Visão Pipeline (colunas por etapa, arrastar e menu no celular) reaproveitando a ação de mudar etapa |
 | `compose.traefik.yaml`, `scripts/vps-setup-env.sh` | alterar | Serviço `scheduler` (mesmo padrão do `backup`) e a variável `SYNC_SECRET` |
 | `context/decisions/0003-meta-sync-scheduler.md` | criar | ADR do agendador sem pg-boss |
 | `context/architecture-context.md`, `context/progress-tracker.md` | alterar | Registrar a decisão e o estado |
@@ -136,7 +162,8 @@ Chamadas à Meta (Graph API, versão em `META_GRAPH_VERSION`, padrão atual `v23
 - `act_<id>/campaigns` — `id,name,objective,status,effective_status,daily_budget,lifetime_budget,start_time,stop_time,created_time,updated_time`
 - `act_<id>/adsets` — `id,name,campaign_id,status,effective_status,daily_budget,lifetime_budget,optimization_goal,billing_event,start_time,end_time,targeting`
 - `act_<id>/ads` — `id,name,adset_id,campaign_id,status,effective_status,created_time,creative{thumbnail_url}`
-- `act_<id>/insights` — `level=ad`, `time_increment=1`, `time_range={since,until}`, campos `ad_id,date_start,spend,impressions,reach,clicks,inline_link_clicks,actions`
+- `act_<id>/insights` — `level=ad`, `time_increment=1`, `time_range={since,until}`, campos `ad_id,date_start,spend,impressions,reach,frequency,clicks,inline_link_clicks,actions`
+- `<page_id>/leadgen_forms` e `<form_id>/leads` (filtro por data de criação) — `id,created_time,ad_id,adset_id,campaign_id,form_id,field_data`
 - Para incluir arquivados e excluídos nas listas, usar o filtro de `effective_status` correspondente. **Os nomes exatos
   dos campos e filtros serão conferidos na documentação oficial da Marketing API na hora de implementar** (AGENTS.md §3.2).
 
@@ -149,6 +176,7 @@ Chamadas à Meta (Graph API, versão em `META_GRAPH_VERSION`, padrão atual `v23
   (AC-1.5). Anúncio novo vindo da Meta entra com `variantId = null`.
 - `DailyAdInsight` (já existe): upsert por `(publishedAdId, date, source=META_API)` → substitui, não soma (AC-2.2).
   `platformLeads` = soma das ações de lead; `actions` guarda a lista original para auditoria.
+- `Lead` (já existe): coluna nova `externalLeadId` (único por marca) e `formAnswers` (JSON com as respostas do formulário).
 - `MetaSyncRun`: `brandId`, `mode`, `trigger`, `status` (RUNNING/SUCCESS/ERROR), `startedAt`, `finishedAt`, contagens,
   `step`, `error` (texto sem token), `retryAfter`. Uma `RUNNING` com menos de 30 min bloqueia outra da mesma marca (AC-1.3).
 
@@ -188,6 +216,8 @@ Chamadas à Meta (Graph API, versão em `META_GRAPH_VERSION`, padrão atual `v23
 | AC-2.3, bordas de limite | unitário | Classificação dos códigos de erro da Meta; nada é apagado |
 | AC-3.x | e2e (Playwright) | Com dados sincronizados de teste: seletor de visão, período, totais por campanha = soma dos anúncios |
 | AC-4.1 | unitário + integração | Dashboard e Resultados com Manual + CSV + Meta no mesmo dia mostram só o da Meta |
+| AC-5.1, 5.2 | unitário + integração | Respostas gravadas de `<form_id>/leads` viram `Lead` com origem e anúncio certos; reimportar não duplica |
+| AC-6.x | e2e (Playwright) | Mover um cartão de coluna muda a etapa e grava o histórico |
 | Segredos | unitário | Erro e auditoria não contêm o token |
 | Real | manual | Dono clica "Sincronizar agora" em produção e confere 2 ou 3 números contra o Gerenciador da Meta |
 
@@ -203,6 +233,8 @@ Chamadas à Meta (Graph API, versão em `META_GRAPH_VERSION`, padrão atual `v23
 - [ ] T7 — Rota interna + serviço `scheduler` no Compose + `SYNC_SECRET`
 - [ ] T8 — Dashboard e Resultados com uma linha por dia; Resultados sem anúncios não ligados (AC-4.x)
 - [ ] T9 — Gerenciador: visão "Na Meta", período, colunas, vínculo (AC-3.x) + e2e
+- [ ] T9b — Leads da Meta a cada 5 min + leads antigos na 1ª vez (AC-5.x) + testes
+- [ ] T9c — Pipeline em Leads (AC-6.x) + e2e
 - [ ] T10 — Deploy, sincronização real com o dono, atualizar `architecture-context.md` e `progress-tracker.md`
 
 ## 9. Aprovação
