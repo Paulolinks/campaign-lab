@@ -45,9 +45,17 @@ export async function isSyncRunning(brandId: string, kind: MetaSyncKind): Promis
   return !!(await db().metaSyncRun.findFirst({ where: { brandId, kind: { in: LOCK_GROUP[kind] }, status: "RUNNING", startedAt: { gte: since } } }));
 }
 
-/** FULL the first time (no successful metrics run yet), INCREMENTAL after that. */
+/** Runs started before the current ad account was set belong to another account. */
+async function accountSince(brandId: string): Promise<Date> {
+  const conn = await db().metaConnection.findUnique({ where: { brandId }, select: { accountChangedAt: true } });
+  return conn?.accountChangedAt ?? new Date(0);
+}
+
+/** FULL the first time for the current ad account (no successful metrics run yet), INCREMENTAL after that. */
 export async function nextMetricsKind(brandId: string): Promise<"FULL" | "INCREMENTAL"> {
-  const done = await db().metaSyncRun.findFirst({ where: { brandId, kind: { in: ["FULL", "INCREMENTAL"] }, status: "SUCCESS" } });
+  const done = await db().metaSyncRun.findFirst({
+    where: { brandId, kind: { in: ["FULL", "INCREMENTAL"] }, status: "SUCCESS", startedAt: { gte: await accountSince(brandId) } },
+  });
   return done ? "INCREMENTAL" : "FULL";
 }
 
@@ -247,7 +255,10 @@ type RawLead = { id: string; created_time: string; ad_id?: string; form_id?: str
 
 async function syncLeads(brandId: string, creds: MetaCredentials, counts: SyncCounts, progress: { step: string }) {
   progress.step = "Leads dos formulários";
-  const last = await db().metaSyncRun.findFirst({ where: { brandId, kind: "LEADS", status: "SUCCESS" }, orderBy: { startedAt: "desc" } });
+  const last = await db().metaSyncRun.findFirst({
+    where: { brandId, kind: "LEADS", status: "SUCCESS", startedAt: { gte: await accountSince(brandId) } },
+    orderBy: { startedAt: "desc" },
+  });
   const since = last ? new Date(last.startedAt.getTime() - LEADS_OVERLAP_MINUTES * 60_000) : null;
   const recent = new Date(Date.now() - 3 * 86_400_000);
 

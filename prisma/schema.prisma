@@ -254,6 +254,8 @@ model MetaConnection {
   tokenLast4         String
   appSecretEncrypted String?
   adAccountId        String
+  /// When the ad account was set or changed. Sync runs before it belong to another account and are ignored.
+  accountChangedAt   DateTime @default(now())
   pageId             String
   savedById          String
   createdAt          DateTime @default(now())

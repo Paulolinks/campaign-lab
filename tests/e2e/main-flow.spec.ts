@@ -426,3 +426,13 @@ test("analyst key: owner creates it once, it reads the brand without lead PII, a
   await expect(page.getByRole("button", { name: "Revogar" })).toHaveCount(0);
   expect((await request.get("/api/agent/v1/brands", { headers: { "x-agent-key": key } })).status()).toBe(401);
 });
+
+test("after the ad account changes, the next sync reads the whole history again", async ({ page }) => {
+  await login(page);
+  const [brand] = await sql(`SELECT id FROM brand WHERE name = 'Cool Season'`);
+  // The FULL run seeded earlier belongs to the previous account.
+  await sql(`UPDATE meta_connection SET "accountChangedAt" = now() WHERE "brandId" = $1`, [brand.id]);
+  await page.goto("/integrations");
+  await page.getByRole("button", { name: "Sincronizar agora" }).click();
+  await expect(page.getByText("Começou a puxar todo o histórico")).toBeVisible();
+});
