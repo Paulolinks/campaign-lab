@@ -59,3 +59,16 @@ export async function updateCampaignLanding(campaignId: string, _: ActionState, 
   revalidatePath("/", "layout");
   return { ok: "Landing page salva." };
 }
+
+/** Checks or unchecks one owner task of the campaign plan (by its text, so a re-import keeps what was done). */
+export async function toggleCampaignTask(campaignId: string, task: string, done: boolean): Promise<ActionState> {
+  const user = await requireEditor();
+  const campaign = await db().campaignPlan.findFirst({ where: { id: campaignId, brand: { workspaceId: user.workspaceId } } });
+  if (!campaign) return { error: "Campanha não encontrada." };
+  const text = task.trim().slice(0, 500);
+  const tasksDone = done ? [...new Set([...campaign.tasksDone, text])] : campaign.tasksDone.filter((t) => t !== text);
+  await db().campaignPlan.update({ where: { id: campaignId }, data: { tasksDone } });
+  await audit({ workspaceId: user.workspaceId, userId: user.id, brandId: campaign.brandId, action: done ? "campaign.task_done" : "campaign.task_reopened", entity: "CampaignPlan", entityId: campaignId, data: { task: text } });
+  revalidatePath(`/campaigns/${campaignId}`);
+  return { ok: done ? "Feito." : "Reaberto." };
+}

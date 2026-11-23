@@ -400,6 +400,8 @@ model CampaignPlan {
   notes            String?
   /// Fields from the import file that have no dedicated column.
   extra            Json?
+  /// Owner checklist (TASKS field of the import): the texts already done. Kept across re-imports.
+  tasksDone        String[]        @default([])
   status           PlanStatus      @default(DRAFT)
   startDate        DateTime?
   endDate          DateTime?

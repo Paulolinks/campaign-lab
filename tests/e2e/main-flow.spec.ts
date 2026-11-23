@@ -436,3 +436,43 @@ test("after the ad account changes, the next sync reads the whole history again"
   await page.getByRole("button", { name: "Sincronizar agora" }).click();
   await expect(page.getByText("Começou a puxar todo o histórico")).toBeVisible();
 });
+
+test("Claude saves a campaign plan as draft; the owner sees the Meta setup, the image to make and the tasks", async ({ page, request }) => {
+  await login(page);
+  await page.goto("/integrations");
+  await page.getByRole("button", { name: "Criar chave de acesso do Claude" }).click();
+  const key = (await page.getByTestId("agent-key").textContent())!.trim();
+  const [brand] = await sql(`SELECT id FROM brand WHERE name = 'Cool Season'`);
+  const text = [
+    "CSCAMP/1", "CAMPAIGN", "CAMPAIGN_KEY: CS-E2E-PLAN", "CAMPAIGN_NAME: Inverno teste", "BRAND: Cool Season", "PERSONA: The Careful Homeowner",
+    "SERVICE: HEATING", "OBJECTIVE: QUALIFIED_LEADS", "TEST_HYPOTHESIS: Winter angle wins", "CHANNELS: META_PAID", "LANDING_URL: https://example.com",
+    "CTA_DESTINATION: META_INSTANT_FORM", "META_CAMPAIGN_NAME: CS_E2E_Campanha", "TASKS: <<<", "- Fazer a imagem do A01", "- Aprovar o plano", ">>>",
+    "AD", "AD_KEY: CS-E2E-PLAN-A01", "AD_NAME: A01 Heat", "ADSET_NAME: CS_E2E_Conjunto_A01", "ADSET_LOCATION: Marietta, GA + 35 mi",
+    "FORM_QUESTIONS: Which room? · ZIP", "MEDIA_SPEC: Imagem 1080 x 1080", "ANGLE: HEAT", "FORMAT: IMAGE_1_1", "FUNNEL_STAGE: CONSIDERATION",
+    "HOOK: Cold?", "PRIMARY_TEXT: Need heat?", "HEADLINE: Warm Again", "CTA: GET_QUOTE", "VISUAL_DIRECTION: A heat pump by a brick home",
+    "IMAGE_PROMPT: Photorealistic heat pump beside a brick home", "END_AD", "END_CAMPAIGN",
+  ].join("\n");
+
+  const dry = await request.post(`/api/agent/v1/brands/${brand.id}/import`, { headers: { "x-agent-key": key }, data: { fileName: "e2e.txt", text, dryRun: true } });
+  expect((await dry.json()).plan.ok).toBe(true);
+  expect((await sql(`SELECT 1 FROM campaign_plan WHERE "campaignKey" = 'CS-E2E-PLAN'`)).length).toBe(0);
+  const res = await request.post(`/api/agent/v1/brands/${brand.id}/import`, { headers: { "x-agent-key": key }, data: { fileName: "e2e.txt", text } });
+  expect(res.status()).toBe(201);
+  const [campaignId] = (await res.json()).campaignIds;
+
+  await page.goto(`/campaigns/${campaignId}`);
+  await expect(page.getByRole("heading", { name: "Como fica no Gerenciador da Meta" })).toBeVisible();
+  await expect(page.getByText("CS_E2E_Campanha")).toBeVisible();
+  await expect(page.getByText("Cadastros (Leads) · formulário instantâneo")).toBeVisible();
+  await expect(page.getByText("CS_E2E_Conjunto_A01")).toBeVisible();
+  await page.getByLabel("Fazer a imagem do A01").check();
+  await expect(page.getByText("1 de 2 feitas")).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Fazer a imagem do A01")).toBeChecked();
+
+  await page.getByRole("link", { name: /Abrir: texto, imagem, prompt e upload/ }).click();
+  await expect(page.getByRole("heading", { name: "Faça esta mídia" })).toBeVisible();
+  await expect(page.getByText("Photorealistic heat pump beside a brick home")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copiar prompt" })).toBeVisible();
+  await expect(page.getByText("Marietta, GA + 35 mi")).toBeVisible();
+});

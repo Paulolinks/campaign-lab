@@ -7,14 +7,19 @@ import { db } from "@/lib/db";
  * Everything the analysis needs (plans, Meta structure, ad texts, daily numbers, funnel, money), never lead PII.
  */
 
-/** Workspace of a valid, not revoked key, or null. Marks the key as used. */
-export async function workspaceForAgent(request: Request): Promise<string | null> {
+/** The valid, not revoked key of the request, or null. Marks the key as used. */
+export async function agentKeyOf(request: Request) {
   const key = readAgentKey((n) => request.headers.get(n));
   if (!key) return null;
   const row = await db().agentAccessKey.findUnique({ where: { keyHash: hashAgentKey(key) } });
   if (!row || row.revokedAt) return null;
   await db().agentAccessKey.update({ where: { id: row.id }, data: { lastUsedAt: new Date() } });
-  return row.workspaceId;
+  return row;
+}
+
+/** Workspace of a valid, not revoked key, or null. */
+export async function workspaceForAgent(request: Request): Promise<string | null> {
+  return (await agentKeyOf(request))?.workspaceId ?? null;
 }
 
 const num = (v: { toString(): string } | null | undefined) => (v == null ? null : Number(v.toString()));

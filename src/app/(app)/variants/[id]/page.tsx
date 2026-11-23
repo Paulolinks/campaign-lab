@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { adSetSetup, adSetup, asExtra, campaignSetup, listItems } from "@/domain/meta-setup";
 import { costPer, formatMoney, toCents } from "@/domain/metrics";
 import { db } from "@/lib/db";
 import { APPROVAL, formatDate, humanize, options, PLAN_STATUS, PLATFORM, TEST_LABEL, UPLOAD_STATUS } from "@/lib/labels";
@@ -8,6 +9,8 @@ import { ActionForm } from "../../../action-form";
 import { Button, Detail, Empty, PageHeader, Panel, Pill, Select, Table } from "../../../ui";
 import { updateVariantStatus } from "../../campaigns/actions";
 import { AdPreview } from "../../ad-preview";
+import { CopyButton } from "../../copy-button";
+import { MetaLevel } from "../../meta-setup-view";
 import { ApprovalBox } from "../../approvals/approval-box";
 import { MediaGrid } from "../../media-grid";
 import { MediaUploader } from "../../media-uploader";
@@ -37,6 +40,12 @@ export default async function VariantPage({ params }: { params: Promise<{ id: st
   const spend = v.publishedAds.flatMap((p) => p.insights).reduce((s, i) => s + toCents(i.spend), 0);
   const leads = v.leads.filter((l) => l.status !== "DISQUALIFIED").length;
   const tz = v.brand.timezone;
+  const adExtra = asExtra(v.extra);
+  const campaignExtra = asExtra(v.campaign.extra);
+  const metaCampaign = campaignSetup(campaignExtra, v.campaign.ctaDestination);
+  const metaAdSet = adSetSetup(adExtra);
+  const metaAd = adSetup(adExtra);
+  const form = listItems(adExtra.FORM_QUESTIONS);
 
   return (
     <>
@@ -56,6 +65,50 @@ export default async function VariantPage({ params }: { params: Promise<{ id: st
           </>
         }
       />
+
+      <Panel title="Faça esta mídia" aside="Depois de pronta, suba aqui mesmo" className="mb-4">
+        <div className="grid gap-5 lg:grid-cols-[1.3fr_1fr]">
+          <div className="flex flex-col gap-4">
+            <Detail label="O que mostrar">{v.visualDirection}</Detail>
+            {adExtra.MEDIA_SPEC && <Detail label="Tamanho e tipo">{adExtra.MEDIA_SPEC}</Detail>}
+            {v.imagePrompt && (
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-soft">Prompt para o gerador de imagem (copie e cole)</div>
+                <pre className="mt-1 whitespace-pre-wrap break-words rounded-lg border border-line bg-[#0b1420] p-3 font-mono text-xs">{v.imagePrompt}</pre>
+                <div className="mt-2">
+                  <CopyButton text={v.imagePrompt} label="Copiar prompt" />
+                </div>
+              </div>
+            )}
+            {v.videoScript && <Detail label="Roteiro do vídeo">{v.videoScript}</Detail>}
+          </div>
+          <div className="flex flex-col gap-3">
+            <MediaUploader brandId={v.brandId} variantId={v.id} />
+            <p className="text-xs text-soft">{v.assets.length ? `${v.assets.length} arquivo(s) já enviado(s). Veja em "Mídia" mais abaixo.` : "Nenhuma mídia enviada ainda."}</p>
+          </div>
+        </div>
+      </Panel>
+
+      {(metaAdSet.length > 0 || metaAd.length > 0 || form.length > 0) && (
+        <Panel title="Configuração na Meta" aside="Como montar este anúncio no Gerenciador, campo por campo" className="mb-4">
+          <div className="flex flex-col gap-3">
+            <MetaLevel step="1 · CAMPANHA" title={campaignExtra.META_CAMPAIGN_NAME ?? v.campaign.name} rows={metaCampaign.filter((r) => r.key !== "META_CAMPAIGN_NAME")} />
+            <MetaLevel step="2 · CONJUNTO" title={metaAdSet.find((r) => r.key === "ADSET_NAME")?.value ?? v.adKey} rows={metaAdSet.filter((r) => r.key !== "ADSET_NAME")} indent={1} />
+            <MetaLevel
+              step="3 · ANÚNCIO"
+              title={v.name ?? v.adKey}
+              rows={[
+                ...metaAd,
+                { key: "HEADLINE", label: "Título", value: v.headline },
+                ...(v.description ? [{ key: "DESCRIPTION", label: "Descrição", value: v.description }] : []),
+                { key: "CTA", label: "Botão", value: humanize(v.cta) },
+                ...(form.length ? [{ key: "FORM", label: "Perguntas do formulário", value: form.map((q) => `• ${q}`).join("\n") }] : []),
+              ]}
+              indent={2}
+            />
+          </div>
+        </Panel>
+      )}
 
       <Panel title="Como fica no Facebook e aprovação" aside="Aprovar não publica nada na Meta" className="mb-4">
         <div className="grid gap-5 lg:grid-cols-[400px_1fr]">
@@ -83,9 +136,6 @@ export default async function VariantPage({ params }: { params: Promise<{ id: st
             <Detail label="Texto principal">{v.primaryText}</Detail>
             <Detail label="Descrição">{v.description}</Detail>
             <Detail label="CTA">{humanize(v.cta)}</Detail>
-            <Detail label="Roteiro do vídeo">{v.videoScript}</Detail>
-            <Detail label="Direção visual">{v.visualDirection}</Detail>
-            <Detail label="Prompt de imagem">{v.imagePrompt}</Detail>
             <Detail label="Notas">{v.notes}</Detail>
           </div>
         </Panel>
@@ -124,10 +174,9 @@ export default async function VariantPage({ params }: { params: Promise<{ id: st
       </div>
 
       <Panel title="Mídia (vídeos e imagens)" aside="Arquivos privados — só usuários logados veem" className="mt-4">
-        <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
-          <MediaUploader brandId={v.brandId} variantId={v.id} />
+        <div>
           {v.assets.length === 0 ? (
-            <Empty>Nenhum arquivo neste anúncio ainda.</Empty>
+            <Empty>Nenhum arquivo neste anúncio ainda. Suba lá em cima, em &quot;Faça esta mídia&quot;.</Empty>
           ) : (
             <MediaGrid
               items={v.assets.map((a) => ({ id: a.id, kind: a.kind, fileName: a.fileName, bytes: Number(a.bytes), uploadStatusLabel: UPLOAD_STATUS[a.uploadStatus].label }))}

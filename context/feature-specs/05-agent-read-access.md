@@ -38,5 +38,11 @@ e trazer a análise, sem o dono exportar planilhas. O token da Meta continua só
 - [x] T6 E2E
 - [ ] T7 Deploy + chave no ambiente do Claude + primeira análise
 
+## Adendo 2026-11-23 (pedido do dono: "faça as campanhas lá no app, com as configurações e o tipo de imagem")
+- `POST /api/agent/v1/brands/{id}/import` com `{ fileName, text, dryRun }`: o Claude salva planos CSCAMP/1 como **rascunho**, igual ao Importar (mesmo serviço, registrado como feito pelo dono que criou a chave). Nada vai para a Meta.
+- Campos opcionais do CSCAMP/1 lidos por `src/domain/meta-setup.ts`: campanha `META_*` e `TASKS`; anúncio `ADSET_*`, `AD_IDENTITY`, `AD_FORMAT_META`, `MEDIA_SPEC`, `FORM_TYPE`, `FORM_INTRO`, `FORM_THANKS`, `FORM_QUESTIONS`.
+- Campanha: painel "Como fica no Gerenciador da Meta" (campanha → conjunto → anúncio) e "Suas tarefas" com caixas marcáveis (`campaign_plan.tasksDone`, mantido na reimportação).
+- Anúncio: painel "Faça esta mídia" (o que mostrar, tamanho, prompt com botão Copiar e upload no mesmo lugar) e "Configuração na Meta".
+
 ## Fora de escopo
-Escrever no app (tarefas e relatórios do Claude dentro do app) e rotina diária agendada: próxima spec.
+Relatórios do Claude dentro do app e rotina diária agendada: próxima spec.
