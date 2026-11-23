@@ -45,8 +45,10 @@ export async function saveMetaConnection(_: ActionState, data: FormData): Promis
   if (!adAccountId) return { error: "ID da conta de anúncios: só números (ex.: 1234567890 ou act_1234567890)." };
   if (!pageId) return { error: "ID da página: só números." };
 
+  const accountChanged = !existing || existing.adAccountId !== adAccountId;
   const fields = {
     adAccountId,
+    ...(accountChanged ? { accountChangedAt: new Date() } : {}),
     pageId,
     savedById: user.id,
     ...(token ? { tokenEncrypted: sealSecret(token), tokenLast4: token.slice(-4) } : {}),
@@ -62,8 +64,16 @@ export async function saveMetaConnection(_: ActionState, data: FormData): Promis
   const creds = (await metaCredentials(brand.id))!;
   const result = await testMetaConnection(creds);
   await recordTest(brand.id, user, result, adAccountId);
+  // New ad account: read its whole history and form leads right away, without another click.
+  if (result.ok && accountChanged && !(await isSyncRunning(brand.id, "FULL"))) {
+    after(async () => {
+      const metrics = await runMetaSync(brand.id, { kind: "FULL", trigger: "MANUAL", userId: user.id });
+      if (metrics.ok) await runMetaSync(brand.id, { kind: "LEADS", trigger: "MANUAL", userId: user.id });
+    });
+  }
   revalidatePath("/", "layout");
-  return message(result);
+  const msg = message(result);
+  return result.ok && accountChanged && msg?.ok ? { ok: `${msg.ok} Puxando todo o histórico da conta; atualize a página em alguns minutos.` } : msg;
 }
 
 export async function testMeta(): Promise<ActionState> {
