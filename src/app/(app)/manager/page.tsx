@@ -10,7 +10,7 @@ import { ApprovalBox } from "../approvals/approval-box";
 import { MetaView } from "./meta-view";
 
 type Tab = "campaigns" | "adsets" | "ads";
-type Search = { tab?: string; c?: string; ad?: string; p?: string; view?: string; s?: string; period?: string };
+type Search = { tab?: string; c?: string; ad?: string; p?: string; view?: string; s?: string; period?: string; archived?: string };
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: "campaigns", label: "Campanhas", icon: "▣" },
@@ -87,8 +87,9 @@ export default async function ManagerPage({ searchParams }: { searchParams: Prom
   }
   const full = await db().brand.findUniqueOrThrow({ where: { id: brand.id }, select: { domain: true, adDailyBudget: true } });
 
+  const archivedCount = await db().campaignPlan.count({ where: { brandId: brand.id, status: "ARCHIVED" } });
   const campaigns = await db().campaignPlan.findMany({
-    where: { brandId: brand.id },
+    where: { brandId: brand.id, ...(sp.archived === "1" ? {} : { status: { not: "ARCHIVED" } }) },
     orderBy: { createdAt: "desc" },
     include: {
       variants: {
@@ -133,7 +134,7 @@ export default async function ManagerPage({ searchParams }: { searchParams: Prom
 
   const href = (q: Partial<Search>) => {
     const params = new URLSearchParams();
-    const merged = { view: "plan", tab, c: sp.c, ...q };
+    const merged = { view: "plan", tab, c: sp.c, archived: sp.archived, ...q };
     for (const [k, v] of Object.entries(merged)) if (v) params.set(k, v);
     return `/manager?${params}`;
   };
@@ -155,6 +156,15 @@ export default async function ManagerPage({ searchParams }: { searchParams: Prom
       />
 
       <ViewSwitch view="plan" />
+      {archivedCount > 0 && (
+        <div className="-mt-2 mb-3 text-xs text-soft">
+          {sp.archived === "1" ? (
+            <Link href={href({ archived: undefined })} className="font-semibold text-accent hover:underline">Esconder as arquivadas</Link>
+          ) : (
+            <Link href={href({ archived: "1" })} className="font-semibold text-accent hover:underline">Ver arquivadas ({archivedCount})</Link>
+          )}
+        </div>
+      )}
       <div className={`grid gap-4 ${selected ? "2xl:grid-cols-[1fr_520px]" : ""}`}>
         <div className="min-w-0 overflow-hidden rounded-[13px] border border-line bg-surface">
           <div className="flex flex-wrap border-b border-line">
@@ -296,7 +306,7 @@ export default async function ManagerPage({ searchParams }: { searchParams: Prom
                         <DeliveryCell d={r.delivery} />
                       </td>
                       <td className="max-w-48 px-3 py-3 text-[12px]">{r.adSet.name}</td>
-                      <td className="px-3 py-3 text-[12px]">{r.v.assets.length ? "✓ Enviada" : <span className="text-warn">Falta vídeo</span>}</td>
+                      <td className="px-3 py-3 text-[12px]">{r.v.assets.length ? "✓ Enviada" : <span className="text-warn">{r.v.format.toUpperCase().startsWith("VIDEO") ? "Falta vídeo" : "Falta imagem"}</span>}</td>
                       <td className="px-3 py-3 text-right">{r.leads ? `${r.leads} leads` : "—"}</td>
                       <td className="px-3 py-3 text-right">{r.hasSpend ? money(costPer(r.spend, r.leads)) : "—"}</td>
                       <td className="px-3 py-3 text-right">{money(r.spend, r.hasSpend)}</td>
