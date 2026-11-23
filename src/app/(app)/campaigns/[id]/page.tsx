@@ -11,7 +11,8 @@ import { ActionForm } from "../../../action-form";
 import { Button, Detail, Field, PageHeader, Panel, Pill, Select } from "../../../ui";
 import { MetaLevel } from "../../meta-setup-view";
 import { updateCampaignLanding, updateCampaignStatus } from "../actions";
-import { TaskList } from "./task-list";
+import { suggestVariant } from "@/domain/meta-sync";
+import { TaskList, type Task } from "./task-list";
 
 export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -54,7 +55,20 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const pending = campaign.variants.filter((v) => v.approvalStatus === "PENDING").length;
   const campaignExtra = asExtra(campaign.extra);
   const extra = otherExtra(campaignExtra, CAMPAIGN_SETUP_KEYS);
-  const tasks = listItems(campaignExtra.TASKS);
+  const MEDIA_TASK = /imagem|image|foto|photo|v[ií]deo|video|m[ií]dia/i;
+  const tasks: Task[] = listItems(campaignExtra.TASKS).map((text) => {
+    const v = MEDIA_TASK.test(text) ? suggestVariant(text, campaign.variants) : null;
+    if (!v) return { text, media: null };
+    const e = asExtra(v.extra);
+    return {
+      text,
+      media: {
+        variantId: v.id, brandId: campaign.brandId, code: /(?:^|-)([A-Za-z]\d{2,3})$/.exec(v.adKey)?.[1] ?? v.adKey,
+        isVideo: v.format.toUpperCase().startsWith("VIDEO"), what: v.visualDirection, spec: e.MEDIA_SPEC ?? null,
+        prompt: v.imagePrompt, script: v.videoScript, files: v._count.assets,
+      },
+    };
+  });
   const metaCampaign = campaignSetup(campaignExtra, campaign.ctaDestination);
   const metaAdSets = campaign.variants.map((v) => {
     const e = asExtra(v.extra);

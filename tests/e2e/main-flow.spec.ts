@@ -465,6 +465,14 @@ test("Claude saves a campaign plan as draft; the owner sees the Meta setup, the 
   await expect(page.getByText("CS_E2E_Campanha")).toBeVisible();
   await expect(page.getByText("Cadastros (Leads) · formulário instantâneo")).toBeVisible();
   await expect(page.getByText("CS_E2E_Conjunto_A01")).toBeVisible();
+  // The image task already opens what to make, the prompt to copy and where to upload.
+  await expect(page.getByText("Faça esta imagem · anúncio A01")).toBeVisible();
+  await expect(page.getByText("Photorealistic heat pump beside a brick home")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copiar prompt" })).toBeVisible();
+  await page.getByRole("button", { name: "Fechar" }).click();
+  await expect(page.getByText("Faça esta imagem · anúncio A01")).toBeHidden();
+  await page.getByRole("button", { name: "Ver a imagem a fazer" }).click();
+  await expect(page.getByText("Subir aqui quando estiver pronta")).toBeVisible();
   await page.getByLabel("Fazer a imagem do A01").check();
   await expect(page.getByText("1 de 2 feitas")).toBeVisible();
   await page.reload();
@@ -475,4 +483,14 @@ test("Claude saves a campaign plan as draft; the owner sees the Meta setup, the 
   await expect(page.getByText("Photorealistic heat pump beside a brick home")).toBeVisible();
   await expect(page.getByRole("button", { name: "Copiar prompt" })).toBeVisible();
   await expect(page.getByText("Marietta, GA + 35 mi")).toBeVisible();
+
+  // Claude can tidy the list: an archived plan leaves the list but is one click away.
+  const bad = await request.post(`/api/agent/v1/brands/${brand.id}/campaigns/${campaignId}/status`, { headers: { "x-agent-key": key }, data: { status: "TESTING" } });
+  expect(bad.status()).toBe(400);
+  const arch = await request.post(`/api/agent/v1/brands/${brand.id}/campaigns/${campaignId}/status`, { headers: { "x-agent-key": key }, data: { status: "ARCHIVED" } });
+  expect(arch.status()).toBe(200);
+  await page.goto("/campaigns");
+  await expect(page.getByRole("link", { name: "Inverno teste" })).toBeHidden();
+  await page.getByRole("link", { name: /Ver arquivadas/ }).click();
+  await expect(page.getByRole("link", { name: "Inverno teste" })).toBeVisible();
 });

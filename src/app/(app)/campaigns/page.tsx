@@ -4,13 +4,15 @@ import { PLAN_STATUS } from "@/lib/labels";
 import { requireBrand } from "@/lib/session";
 import { Empty, LinkButton, PageHeader, Panel, Pill, Table } from "../../ui";
 
-export default async function CampaignsPage() {
+export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ archived?: string }> }) {
+  const showArchived = (await searchParams).archived === "1";
   const { brand } = await requireBrand();
   const campaigns = await db().campaignPlan.findMany({
-    where: { brandId: brand.id },
+    where: { brandId: brand.id, ...(showArchived ? {} : { status: { not: "ARCHIVED" } }) },
     orderBy: { createdAt: "desc" },
     include: { _count: { select: { variants: true, leads: true } } },
   });
+  const archivedCount = await db().campaignPlan.count({ where: { brandId: brand.id, status: "ARCHIVED" } });
 
   return (
     <>
@@ -20,6 +22,13 @@ export default async function CampaignsPage() {
         subtitle="Ideias e hipóteses internas. Uma campanha aqui não é a campanha da Meta: o vínculo é feito pelos anúncios publicados."
         actions={<LinkButton href="/import" variant="primary">Importar TXT</LinkButton>}
       />
+      {archivedCount > 0 && (
+        <div className="mb-3 text-xs text-soft">
+          <Link href={showArchived ? "/campaigns" : "/campaigns?archived=1"} className="font-semibold text-accent hover:underline">
+            {showArchived ? "Esconder as arquivadas" : `Ver arquivadas (${archivedCount})`}
+          </Link>
+        </div>
+      )}
       <Panel>
         {campaigns.length === 0 ? (
           <Empty action={<LinkButton href="/import" variant="primary">Importar a primeira campanha</LinkButton>}>Nenhuma campanha nesta marca.</Empty>
