@@ -1,0 +1,204 @@
+CSCAMP/1
+# Plano gerado pelo Claude em 2026-11-23 a partir da persona "The Careful Homeowner" e da analise do historico da conta
+# (abr/2024 a ago/2026: formulario da Meta trouxe 58 de 68 leads; vencedores = pergunta direta + lista curta + foto).
+# Importado como RASCUNHO. NADA e publicado na Meta pelo app.
+CAMPAIGN
+CAMPAIGN_KEY: CS-INV-FORM-2026-11
+CAMPAIGN_NAME: Inverno 2026 · Aquecimento · Formulário da Meta
+BRAND: Cool Season
+PERSONA: The Careful Homeowner
+SERVICE: HEATING_REPLACEMENT_AND_MINI_SPLIT
+OBJECTIVE: QUALIFIED_LEADS
+TEST_HYPOTHESIS: In winter, a direct question about a heating need the homeowner already feels (old heat pump/furnace, or one cold room), with a short checklist, a real-looking photo and a Meta instant form, brings leads at US$ 6-15 and booked visits under US$ 120. Round 1 compares central heating replacement (A01) against a mini split for one cold room (B01).
+CHANNELS: META_PAID
+LANDING_URL: {{PRIVACY_POLICY_URL}}
+MARKET: Marietta, GA + 35 miles (Greater Atlanta). No Jacksonville.
+TEST_VARIABLE: SERVICE_ANGLE
+CTA_DESTINATION: META_INSTANT_FORM
+BUDGET_USD_PER_DAY: 40
+META_CAMPAIGN_NAME: CS_Inverno-Formulario_2026-11
+META_OBJECTIVE: Cadastros (Leads)
+META_SPECIAL_CATEGORY: Nenhuma (serviço de HVAC não é moradia, emprego nem crédito)
+META_BUDGET_MODE: No conjunto (desligar "Orçamento da campanha Advantage+"), US$ 20 por conjunto
+META_BID_STRATEGY: Maior volume (sem limite de custo)
+META_AB_TEST: Não. O app compara um conjunto contra o outro
+META_STATUS: Pausada. Só você liga
+TASKS: <<<
+Fazer a imagem do A01 (sistema central). Abra o anúncio A01, copie o prompt e gere a imagem. Se tiver foto real de uma instalação sua, use ela.
+Fazer a imagem do B01 (mini split num quarto). Mesmo caminho no anúncio B01.
+Subir as 2 imagens, cada uma no seu anúncio, em "Faça esta mídia".
+Mandar o link da política de privacidade do site (a Meta exige no formulário).
+Conferir os textos e as perguntas do formulário. Se algo não for verdade para a Cool Season, me avise.
+Aprovar o A01 e o B01 na aba Aprovação de cada anúncio.
+Montar na Meta igual à tela "Como fica no Gerenciador da Meta" (tudo pausado) e ligar os 2 conjuntos.
+Ligar para cada lead assim que chegar e mover no Pipeline até visita e venda.
+Quando um dos dois for encerrado pelo app, fazer a imagem do reserva (A02 ou B02) e trocar.
+>>>
+NOTES: <<<
+Rodada 1: A01 + B01 ligados, US$ 20/dia cada (teto US$ 40/dia). A02 e B02 são reservas: entram quando um da rodada 1 for encerrado ou cansar.
+Regras do app: teste até o dia 3; passa com 2 leads ou 1 visita marcada. Quando o custo por lead subir 50% em relação à primeira semana, troca a imagem e mantém o texto (o histórico mostra cansaço em 1 a 2 semanas).
+Sem preço, sem financiamento, sem "lowest price", sem "save X%", sem "ACT FAST", sem prometer rapidez, garantia ou licença que não esteja confirmada.
+>>>
+AD
+AD_KEY: CS-INV-FORM-2026-11-A01
+AD_NAME: A01 · Novo aquecimento central (pergunta direta)
+ADSET_NAME: CS_Inv-Form_A01_Central_2026-11
+ADSET_CONVERSION_LOCATION: Formulários instantâneos
+ADSET_OPTIMIZATION: Maximizar o número de leads
+ADSET_BUDGET_USD_PER_DAY: 20
+ADSET_SCHEDULE: Começa quando você ligar · sem data de fim (o app diz quando parar)
+ADSET_LOCATION: Marietta, GA + 35 milhas · "Pessoas que moram neste local"
+ADSET_AGE: 30 a 65+
+ADSET_GENDER: Todos
+ADSET_AUDIENCE: Público Advantage+ ligado, sem interesses (como nos seus vencedores)
+ADSET_PLACEMENTS: Advantage+ (Facebook e Instagram)
+ADSET_LANGUAGE: Inglês
+AD_IDENTITY: Página CS Confort Time + Instagram cs_confort_time
+AD_FORMAT_META: Imagem ou vídeo único → imagem
+MEDIA_SPEC: Imagem quadrada 1080 × 1080, JPG ou PNG, sem texto escrito na imagem
+FORM_TYPE: Maior intenção (a pessoa revisa os dados antes de enviar: menos lead curioso)
+FORM_INTRO: Tell us about your home and we'll call you to set up a visit.
+FORM_THANKS: Thanks! We'll call you soon. Want to talk now? Call us. (botão Ligar com o número da empresa)
+FORM_QUESTIONS: What do you need? (Replace heat pump / Replace furnace / Not sure yet) · Is your system working right now? (Yes / Not well / Not at all) · When do you want this done? (This week / This month / Just researching) · ZIP code · Full name · Phone number
+ANGLE: HEATING_REPLACEMENT_DIRECT
+FORMAT: IMAGE_1_1
+FUNNEL_STAGE: CONVERSION
+HOOK: Need a new heating system installed in Georgia?
+PRIMARY_TEXT: <<<
+Need a new heating system installed in Georgia?
+
+✅ Heat pump or furnace replacement
+✅ A clear written estimate: you see what's included
+✅ The right-sized system for your home, not a guess
+✅ Local HVAC team in Marietta & Greater Atlanta
+
+Tap below, answer 3 quick questions, and we'll call you to set up a visit.
+>>>
+HEADLINE: New Heat Pump or Furnace?
+DESCRIPTION: Clear estimate. Professional installation.
+CTA: GET_QUOTE
+VISUAL_DIRECTION: Foto realista, como se fosse de celular: unidade externa nova de heat pump instalada ao lado de uma casa típica da Geórgia (tijolo ou siding), manhã fria e clara, gramado com geada leve, serviço caprichado (base nivelada, linhas organizadas). Sem texto, sem logo de fabricante, sem neve. Melhor ainda: foto real de uma instalação de vocês.
+IMAGE_PROMPT: Photorealistic smartphone photo of a brand-new outdoor heat pump unit installed on a level concrete pad beside a red-brick suburban home in Georgia, neat insulated refrigerant lines along the wall, cold clear winter morning with light frost on the grass, soft natural daylight, square 1:1, no text, no logos, no brand names, no snow
+END_AD
+AD
+AD_KEY: CS-INV-FORM-2026-11-B01
+AD_NAME: B01 · O cômodo que vive frio (mini split)
+ADSET_NAME: CS_Inv-Form_B01_MiniSplit_2026-11
+ADSET_CONVERSION_LOCATION: Formulários instantâneos
+ADSET_OPTIMIZATION: Maximizar o número de leads
+ADSET_BUDGET_USD_PER_DAY: 20
+ADSET_SCHEDULE: Começa quando você ligar · sem data de fim (o app diz quando parar)
+ADSET_LOCATION: Marietta, GA + 35 milhas · "Pessoas que moram neste local"
+ADSET_AGE: 30 a 65+
+ADSET_GENDER: Todos
+ADSET_AUDIENCE: Público Advantage+ ligado, sem interesses (como nos seus vencedores)
+ADSET_PLACEMENTS: Advantage+ (Facebook e Instagram)
+ADSET_LANGUAGE: Inglês
+AD_IDENTITY: Página CS Confort Time + Instagram cs_confort_time
+AD_FORMAT_META: Imagem ou vídeo único → imagem
+MEDIA_SPEC: Imagem quadrada 1080 × 1080, JPG ou PNG, sem texto escrito na imagem
+FORM_TYPE: Maior intenção (a pessoa revisa os dados antes de enviar: menos lead curioso)
+FORM_INTRO: Tell us which room and we'll call you to talk about the options.
+FORM_THANKS: Thanks! We'll call you soon. Want to talk now? Call us. (botão Ligar com o número da empresa)
+FORM_QUESTIONS: Which room? (Bedroom / Garage / Office / Bonus room / Other) · Do you own the home? (Yes / No) · When do you want this done? (This week / This month / Just researching) · ZIP code · Full name · Phone number
+ANGLE: MINI_SPLIT_COLD_ROOM_DIRECT
+FORMAT: IMAGE_1_1
+FUNNEL_STAGE: CONVERSION
+HOOK: Need heat for a bedroom, garage or office?
+PRIMARY_TEXT: <<<
+Need heat for a bedroom, garage or office?
+
+✅ Ductless mini split: heats in winter, cools in summer
+✅ No ductwork needed
+✅ We look at the room, the wall and the electrical before we recommend anything
+✅ Local HVAC team in Marietta & Greater Atlanta
+
+Tap below, tell us which room, and we'll call you.
+>>>
+HEADLINE: One Cold Room? Fix Just That Room.
+DESCRIPTION: Heat and cool one room, no ductwork.
+CTA: GET_QUOTE
+VISUAL_DIRECTION: Foto realista de um quarto aconchegante (de preferência em cima da garagem) com um mini split branco instalado na parede acima da janela, altura e tamanho reais, acabamento limpo, sem canos aparecendo. Luz quente dentro, fim de tarde frio lá fora. Sem texto, sem marca, sem neve. Se tiver foto real de mini split instalado por vocês, use ela.
+IMAGE_PROMPT: Photorealistic cozy bedroom above a garage, white wall-mounted ductless mini split indoor unit above the window at a realistic height, clean finish with no visible pipes, warm soft interior light, cold late-afternoon winter sky through the window, a folded blanket on the bed, square 1:1, no text, no logos, no brand names, no snow
+END_AD
+AD
+AD_KEY: CS-INV-FORM-2026-11-A02
+AD_NAME: A02 · Reserva · Dois orçamentos, dois serviços diferentes
+ADSET_NAME: CS_Inv-Form_A02_DoisOrcamentos_2026-11
+ADSET_CONVERSION_LOCATION: Formulários instantâneos
+ADSET_OPTIMIZATION: Maximizar o número de leads
+ADSET_BUDGET_USD_PER_DAY: 20
+ADSET_SCHEDULE: Reserva: entra quando o A01 ou o B01 for encerrado
+ADSET_LOCATION: Marietta, GA + 35 milhas · "Pessoas que moram neste local"
+ADSET_AGE: 30 a 65+
+ADSET_GENDER: Todos
+ADSET_AUDIENCE: Público Advantage+ ligado, sem interesses
+ADSET_PLACEMENTS: Advantage+ (Facebook e Instagram)
+ADSET_LANGUAGE: Inglês
+AD_IDENTITY: Página CS Confort Time + Instagram cs_confort_time
+AD_FORMAT_META: Imagem ou vídeo único → imagem
+MEDIA_SPEC: Imagem quadrada 1080 × 1080, JPG ou PNG, sem números legíveis
+FORM_TYPE: Maior intenção
+FORM_INTRO: Already have a quote? Tell us a little and we'll call you.
+FORM_THANKS: Thanks! We'll call you soon.
+FORM_QUESTIONS: Do you already have a quote to replace your system? (Yes / No) · Is your system working right now? (Yes / Not well / Not at all) · When do you want to decide? (This week / This month / Just researching) · ZIP code · Full name · Phone number
+ANGLE: ESTIMATE_TRANSPARENCY
+FORMAT: IMAGE_1_1
+FUNNEL_STAGE: CONSIDERATION
+HOOK: Got two quotes to replace your heating and they're thousands apart?
+PRIMARY_TEXT: <<<
+Got two quotes to replace your heating, and they're thousands apart?
+
+They may not be quoting the same job.
+✅ Equipment and size
+✅ Ductwork and electrical
+✅ What's included, in writing
+
+Already have a quote? Tap below and let us take a second look before you decide.
+>>>
+HEADLINE: Two Quotes. Two Different Jobs?
+DESCRIPTION: Know what's included before you compare.
+CTA: GET_QUOTE
+VISUAL_DIRECTION: Mesa de cozinha numa manhã cinza de inverno com duas folhas de orçamento genéricas lado a lado (sem números legíveis), mãos de uma pessoa de suéter segurando uma caneta, xícara de café. Sem texto, sem logo.
+IMAGE_PROMPT: Photorealistic overhead photo of a kitchen table on a gray winter morning, two generic HVAC estimate sheets side by side with blank checkbox lines and no readable numbers, a homeowner's hands in a cozy sweater holding a pen between them, a steaming coffee mug, square 1:1, no text, no logos
+END_AD
+AD
+AD_KEY: CS-INV-FORM-2026-11-B02
+AD_NAME: B02 · Reserva · Mini split instalado de verdade (prova)
+ADSET_NAME: CS_Inv-Form_B02_MiniSplitReal_2026-11
+ADSET_CONVERSION_LOCATION: Formulários instantâneos
+ADSET_OPTIMIZATION: Maximizar o número de leads
+ADSET_BUDGET_USD_PER_DAY: 20
+ADSET_SCHEDULE: Reserva: entra quando o B01 cansar ou for encerrado
+ADSET_LOCATION: Marietta, GA + 35 milhas · "Pessoas que moram neste local"
+ADSET_AGE: 30 a 65+
+ADSET_GENDER: Todos
+ADSET_AUDIENCE: Público Advantage+ ligado, sem interesses
+ADSET_PLACEMENTS: Advantage+ (Facebook e Instagram)
+ADSET_LANGUAGE: Inglês
+AD_IDENTITY: Página CS Confort Time + Instagram cs_confort_time
+AD_FORMAT_META: Imagem ou vídeo único → imagem
+MEDIA_SPEC: Foto REAL quadrada 1080 × 1080 de um mini split que vocês instalaram (dentro e, se der, a unidade de fora)
+FORM_TYPE: Maior intenção
+FORM_INTRO: Tell us which room and we'll call you to talk about the options.
+FORM_THANKS: Thanks! We'll call you soon.
+FORM_QUESTIONS: Which room? (Bedroom / Garage / Office / Bonus room / Other) · Do you own the home? (Yes / No) · When do you want this done? (This week / This month / Just researching) · ZIP code · Full name · Phone number
+ANGLE: PROOF_REAL_INSTALL
+FORMAT: IMAGE_1_1
+FUNNEL_STAGE: CONSIDERATION
+HOOK: This is what a clean mini split installation looks like.
+PRIMARY_TEXT: <<<
+This is a mini split we installed in Greater Atlanta.
+
+✅ Placed where it heats and cools the room evenly
+✅ Clean lines, neat finish
+✅ One room, no ductwork
+
+Got a room that's always cold? Tap below, tell us which one, and we'll call you.
+>>>
+HEADLINE: One Room. Done Right.
+DESCRIPTION: Heat and cool one room, no ductwork.
+CTA: GET_QUOTE
+VISUAL_DIRECTION: Foto REAL de um mini split instalado pela Cool Season (não usar imagem gerada: o anúncio diz que vocês instalaram). Cômodo arrumado, luz boa, aparelho centralizado, sem bagunça. Sem texto por cima.
+END_AD
+END_CAMPAIGN

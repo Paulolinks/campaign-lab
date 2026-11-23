@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { campaignFunnel } from "@/domain/campaign-funnel";
+import { adSetSetup, adSetup, asExtra, CAMPAIGN_SETUP_KEYS, campaignSetup, listItems, otherExtra } from "@/domain/meta-setup";
 import { formatMoney, toCents } from "@/domain/metrics";
 import { buildUtmUrl } from "@/domain/utm";
 import { db } from "@/lib/db";
@@ -8,7 +9,9 @@ import { APPROVAL, formatDate, humanize, options, PLAN_STATUS, TEST_LABEL } from
 import { requireUser } from "@/lib/session";
 import { ActionForm } from "../../../action-form";
 import { Button, Detail, Field, PageHeader, Panel, Pill, Select } from "../../../ui";
+import { MetaLevel } from "../../meta-setup-view";
 import { updateCampaignLanding, updateCampaignStatus } from "../actions";
+import { TaskList } from "./task-list";
 
 export default async function CampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -49,7 +52,15 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
     won: leadRows.filter((l) => l.status === "WON" || l._count.jobs > 0).length,
   });
   const pending = campaign.variants.filter((v) => v.approvalStatus === "PENDING").length;
-  const extra = Object.entries((campaign.extra ?? {}) as Record<string, string>);
+  const campaignExtra = asExtra(campaign.extra);
+  const extra = otherExtra(campaignExtra, CAMPAIGN_SETUP_KEYS);
+  const tasks = listItems(campaignExtra.TASKS);
+  const metaCampaign = campaignSetup(campaignExtra, campaign.ctaDestination);
+  const metaAdSets = campaign.variants.map((v) => {
+    const e = asExtra(v.extra);
+    return { v, adSet: adSetSetup(e), ad: adSetup(e), form: listItems(e.FORM_QUESTIONS) };
+  });
+  const hasMetaSetup = metaCampaign.length > 0 || metaAdSets.some((a) => a.adSet.length > 0);
   const exampleUtm = buildUtmUrl(campaign.landingUrl, { source: "facebook", medium: "paid_social", campaign: campaign.campaignKey, content: "AD_KEY" });
 
   return (
@@ -93,6 +104,37 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
           )}
         </div>
       </Panel>
+
+      {tasks.length > 0 && (
+        <Panel title="Suas tarefas" aside="O que falta você fazer para esta campanha ir ao ar" className="mb-4">
+          <TaskList campaignId={campaign.id} tasks={tasks} done={campaign.tasksDone} />
+        </Panel>
+      )}
+
+      {hasMetaSetup && (
+        <Panel title="Como fica no Gerenciador da Meta" aside="Campo por campo, como você montaria na mão. Nada é publicado pelo app." className="mb-4">
+          <div className="flex flex-col gap-3">
+            <MetaLevel step="1 · CAMPANHA" title={campaignExtra.META_CAMPAIGN_NAME ?? campaign.name} rows={metaCampaign.filter((r) => r.key !== "META_CAMPAIGN_NAME")} />
+            {metaAdSets.map(({ v, adSet, ad, form }) => (
+              <div key={v.id} className="flex flex-col gap-3">
+                <MetaLevel step="2 · CONJUNTO" title={adSet.find((r) => r.key === "ADSET_NAME")?.value ?? v.adKey} rows={adSet.filter((r) => r.key !== "ADSET_NAME")} indent={1} />
+                <MetaLevel
+                  step="3 · ANÚNCIO"
+                  title={v.name ?? v.adKey}
+                  subtitle={<Link href={`/variants/${v.id}`} className="font-semibold text-accent hover:underline">Abrir: texto, imagem, prompt e upload →</Link>}
+                  rows={[
+                    ...ad,
+                    { key: "HEADLINE", label: "Título", value: v.headline },
+                    { key: "CTA", label: "Botão", value: humanize(v.cta) },
+                    ...(form.length ? [{ key: "FORM", label: "Perguntas do formulário", value: form.map((q) => `• ${q}`).join("\n") }] : []),
+                  ]}
+                  indent={2}
+                />
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[1.6fr_1fr]">
         <Panel title="Hipótese e plano">
