@@ -11,14 +11,6 @@ import { removeMetaConnection, saveMetaConnection, testMeta } from "./actions";
 import { AgentAccessPanel } from "./agent-access-panel";
 import { SyncPanel } from "./sync-panel";
 
-const PLANNED = [
-    { name: "Site / Pixel / CAPI / GA4", phase: "Fase 3", text: "UTMs, formulário do site, eventos deduplicados e sessões agregadas." },
-  { name: "WhatsApp Business Platform", phase: "Fase 3", text: "Somente API oficial em número elegível. Clique em botão de WhatsApp não é conversa confirmada." },
-  { name: "Google Ads API", phase: "Fase 3", text: "Importar campanhas e métricas de Search. Acesso via projeto Google Cloud." },
-  { name: "Marketplace", phase: "Manual", text: "Sem integração. Registro manual, respeitando as políticas atuais." },
-];
-
-
 const STEPS = [
   {
     title: "Token de acesso",
@@ -189,15 +181,6 @@ export default async function IntegrationsPage() {
             Hoje os arquivos ficam no servidor. Quando o Drive for conectado, os arquivos serão enviados para lá e poderão sair do servidor (o banco guarda o ID do Drive).
           </p>
         </Panel>
-        {PLANNED.map((p) => (
-          <Panel key={p.name} title={p.name}>
-            <div className="flex gap-2">
-              <Pill tone="neutral">Não conectado</Pill>
-              <Pill>{p.phase}</Pill>
-            </div>
-            <p className="mt-3 text-xs text-soft">{p.text}</p>
-          </Panel>
-        ))}
       </div>
       <Panel title={`Contas cadastradas em ${brand.name}`} className="mt-4">
         {channels.length === 0 ? (
